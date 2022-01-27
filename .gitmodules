@@ -1,0 +1,18 @@
+[submodule "ext/assimp"]
+	path = ext/assimp
+	url = https://github.com/assimp/assimp.git
+[submodule "ext/cpplocate"]
+	path = ext/cpplocate
+	url = https://github.com/cginternals/cpplocate.git
+[submodule "ext/nanogui"]
+	path = ext/nanogui
+	url = https://github.com/mitsuba-renderer/nanogui.git
+[submodule "ext/stb"]
+	path = ext/stb
+	url = https://github.com/nothings/stb.git
+[submodule "ext/glm"]
+	path = ext/glm
+	url = https://github.com/g-truc/glm.git
+[submodule "ext/embree"]
+	path = ext/embree
+	url = https://github.com/embree/embree.git

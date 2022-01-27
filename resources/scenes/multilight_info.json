@@ -1,0 +1,22 @@
+{
+    "lights": [
+        {
+            "node": "Spot",
+            "type": "point",
+            "position": [0, 0, 0],
+            "power": [5000, 5000, 5000]
+        },
+        {
+            "node": "Spot_001",
+            "type": "point",
+            "position": [0, 0, 0],
+            "power": [5000, 5000, 5000]
+        },
+        {
+            "node": "Spot_002",
+            "type": "point",
+            "position": [0, 0, 0],
+            "power": [5000, 5000, 5000]
+        }
+    ]
+}

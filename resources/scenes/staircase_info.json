@@ -1,0 +1,25 @@
+{
+    "lights": [
+        {
+            "node": "Point_001",
+            "type": "point",
+            "position": [0, 0, 0],
+            "power": [25, 25, 25]
+        },
+        {
+            "node": "Area",
+            "type": "area",
+            "position": [0, 0, 0],
+            "normal": [0, 0, -1],
+            "up": [0, 1, 0],
+            "size": [3.2, 3.4],
+            "power": [1000, 1000, 1000]
+        },
+        {
+            "node": "Ambient",
+            "type": "ambient",
+            "radiance": [0.25, 0.25, 0.25],
+            "range": 1.0
+        }
+    ]
+}

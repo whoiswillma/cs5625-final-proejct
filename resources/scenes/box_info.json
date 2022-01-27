@@ -1,0 +1,10 @@
+{
+    "lights": [
+        {
+            "node": "Light",
+            "type": "point",
+            "position": [0, 0, 0],
+            "power": [500, 500, 350]
+        }
+    ]
+}
