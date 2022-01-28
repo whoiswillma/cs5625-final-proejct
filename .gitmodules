@@ -16,6 +16,3 @@
 [submodule "ext/embree"]
 	path = ext/embree
 	url = https://github.com/embree/embree.git
-[submodule "ext/oneTBB"]
-	path = ext/oneTBB
-	url = https://github.com/oneapi-src/oneTBB.git
