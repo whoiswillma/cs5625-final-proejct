@@ -24,7 +24,6 @@
 #define _USE_MATH_DEFINES
 #include <glm/glm.hpp>
 #include <cmath>
-#include <math.h>
 
 #include "common.hpp"
 

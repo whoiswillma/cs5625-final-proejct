@@ -1,9 +1,9 @@
+#define _USE_MATH_DEFINES
+#include <cmath>
 
 #include "Sky.hpp"
 
-
 using namespace RTUtil;
-
 
 void Sky::init() {
     cY = mat2x5(

@@ -4,6 +4,9 @@
 //  Created by srm, April 2020
 //
 
+#define _USE_MATH_DEFINES
+#include <cmath>
+
 #include "SkyApp.hpp"
 
 #include <nanogui/window.h>

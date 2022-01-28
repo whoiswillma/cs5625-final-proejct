@@ -4,6 +4,9 @@
 //  Created by srm, March 2020
 //
 
+#define _USE_MATH_DEFINES
+#include <cmath>
+
 #include "TetraApp.hpp"
 #include <nanogui/window.h>
 #include <nanogui/layout.h>

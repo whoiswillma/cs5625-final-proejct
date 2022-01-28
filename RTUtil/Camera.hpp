@@ -9,7 +9,7 @@
 #define _USE_MATH_DEFINES
 #undef near
 #undef far
-#include <math.h>
+#include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 

@@ -11,6 +11,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <algorithm>
 
 #include "common.hpp"
 
