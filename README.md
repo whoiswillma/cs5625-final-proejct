@@ -1,25 +1,8 @@
-# CS5625 Starter code
+# CS5625 Starter Code
 
-First, make sure you have cloned the project's submodules with `git submodule update --init --recursive`.
+This is the starter code for [CS 5625, Interactive Computer Graphics](http://www.cs.cornell.edu/courses/cs5625/2022sp/), offered at Cornell University in Spring 2022.  It supports all the assignments in this class.
 
-To try the demo:
+This repository is configured with submodules for several libraries it depends on.  Before you can build it you will need to get the submodules, either by cloning with `--recursive` or by running `git submodule update --init --recursive` after cloning.
 
-1. It's a good idea to create a new folder in which to build things, so let's do that first.
-```sh
-mkdir build
-cd build
-```
+For instructions on how to build this code, see the zeroth assignment, [Devops](http://www.cs.cornell.edu/courses/cs5625/2022sp/assignments/devops.html).
 
-2. Now tell `cmake` that you want it to create a Makefile for you using the project root's `CMakeLists.txt` configuration file. Then you can actually `make`. This is supposed to take a while, but it'll be constantly printing things.
-```sh
-cmake ..
-make
-```
-You can also use `make -j<n>`, with `n` the number of threads you want to build with. It'll be pretty slow with the default of 1. Conventional wisdom says you should make this the number of cores on your system + 1. But don't expect to be able to do anything else while compiling. Once you've compiled once and are just prototyping, you might want to build with 1 thread, so that the `make` output is more sequential and thus more legible. 
-
-3. Now run the actual demo.
-```sh
-./Demo              # or `./Demo Tetra` or `./Demo Sky` to try out others
-```
-
-To add your own binary to the project, create a new directory at the project root, and append `createExecutable("<dir_name>")` to `CMakeLists.txt`.
