@@ -65,7 +65,7 @@ nanogui::Screen(nanogui::Vector2i(width, height), "NanoGUI Demo", false) {
     glm::ivec2(windowWidth, windowHeight), GL_RGBA32F));
 
   // Allocate image for display
-  img_data = std::vector<float>(0.0f, windowWidth * windowHeight * 3);
+  img_data = std::vector<glm::vec3>(windowWidth * windowHeight, glm::vec3(0.0f));
 
   // Arrange windows in the layout we have described
   perform_layout();

@@ -79,9 +79,9 @@ namespace RTUtil {
     int windowWidth, windowHeight;
 
     // Storage for displayed floating-point image in a flat
-    // row-major array.  Pixel (i,j), channel k is at
-    // img_data[3 * (windowWidth * iy + ix) + k]
-    std::vector<float> img_data;
+    // row-major array.  Pixel (ix,iy) is at
+    // img_data[windowWidth * iy + ix]
+    std::vector<glm::vec3> img_data;
 
     // Exposure for HDR -> LDR conversion
     float exposure = 1.0f;
