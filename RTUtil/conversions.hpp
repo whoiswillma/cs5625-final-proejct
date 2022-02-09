@@ -18,48 +18,45 @@
 
 namespace RTUtil {
 
-    // Convert a 3x3 Assimp matrix to a 3x3 Eigen matrix
-    template <class T>
-    inline Eigen::Matrix<T, 3, 3> a2e(aiMatrix3x3t<T> m) {
-        Eigen::Matrix<T, 3, 3> e;
-        e.matrix().transpose() = Eigen::Map<Eigen::Matrix<T, 3, 3>>(&m.a1);
-        return e;
+    inline glm::vec2 a2g(const aiVector2D &v) {
+        return glm::vec2(v.x, v.y);
     }
 
-    // Convert a 4x4 Assimp matrix to an Eigen 3D affine transformation
-    template <class T>
-    inline Eigen::Transform<T, 3, Eigen::Affine> a2e(aiMatrix4x4t<T> m) {
-        Eigen::Transform<T, 3, Eigen::Affine> a;
-        a.matrix().transpose() = Eigen::Map<Eigen::Matrix<T, 4, 4>>(&m.a1);
-        return a;
+    inline glm::vec3 a2g(const aiVector3D &v) {
+        return glm::vec3(v.x, v.y, v.z);
     }
 
-    // Convert a 3-vector from Assimp to Eigen
-    template <class T>
-    inline Eigen::Matrix<T, 3, 1> a2e(aiVector3t<T> v) {
-        return Eigen::Map<Eigen::Matrix<T, 3, 1>>(&v.x);
+    inline glm::vec4 a2g(const aiVector4D &v) {
+        return glm::vec4(v.x, v.y, v.z, v.w);
     }
 
-    // Convert a quaternion from Assimp to Eigen
-    template <class T>
-    inline Eigen::Quaternion<T> a2e(aiQuaterniont<T> v) {
-        return Eigen::Quaternion<T>(v.w, v.x, v.y, v.z);
+    inline glm::vec3 a2g(const aiColor3D &c) {
+        return glm::vec3(c.r, c.g, c.b);
     }
 
-    // Convert a 2-vector from Assimp to Eigen
-    template <class T>
-    inline Eigen::Matrix<T, 2, 1> a2e(aiVector2t<T> v) {
-        return Eigen::Map<Eigen::Matrix<T, 2, 1>>(&v.x);
+    inline glm::vec4 a2g(const aiColor4D &c) {
+        return glm::vec4(c.r, c.g, c.b, c.a);
     }
 
-    // Convert an RGB color from Assimp to an Eigen 3-vector
-    inline Eigen::Matrix<ai_real, 3, 1> a2e(aiColor3D c) {
-        return Eigen::Map<Eigen::Matrix<ai_real, 3, 1>>(&c.r);
+    inline glm::quat a2g(const aiQuaternion &q) {
+        return glm::quat(q.w, q.x, q.y, q.z);
     }
 
-    // Convert an RGBA color from Assimp to an Eigen 4-vector
-    inline Eigen::Matrix<ai_real, 4, 1> a2e(aiColor4D c) {
-        return Eigen::Map<Eigen::Matrix<ai_real, 4, 1>>(&c.r);
+    inline glm::mat3 a2g(const aiMatrix3x3 &m) {
+        return glm::mat3(
+            m.a1, m.b1, m.c1, // first column
+            m.a2, m.b2, m.c2, 
+            m.a3, m.b3, m.c3, // last column
+            );
+    }
+
+    inline glm::mat4 a2g(const aiMatrix4x4 &m) {
+        return glm::mat4(
+            m.a1, m.b1, m.c1, m.d1, // first column
+            m.a2, m.b2, m.c2, m.d2, 
+            m.a3, m.b3, m.c3, m.d3,
+            m.a4, m.b4, m.c4, m.d4, // last column
+            );
     }
 
 }
