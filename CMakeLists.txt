@@ -29,9 +29,7 @@ list(APPEND LIBS glm::glm)
 # ----------------------------------------------------------------
 # Include nanogui as a subproject
 
-# Force it to use OpenGL, even on Mac
 set(NANOGUI_BACKEND "OpenGL" CACHE BOOL " " FORCE)
-
 # Disable building extras we won't need (pure C++ project)
 set(NANOGUI_BUILD_EXAMPLES OFF CACHE BOOL " " FORCE)
 set(NANOGUI_BUILD_PYTHON  OFF CACHE BOOL " " FORCE)
@@ -69,21 +67,6 @@ set_target_properties(cpplocate PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINA
 
 list(APPEND INCS "${CPPLOCATE_BASE_DIR}/source/cpplocate/include")
 list(APPEND LIBS cpplocate::cpplocate)
-
-# ----------------------------------------------------------------
-# Include TBB as a subproject, as we need it for Embree
-
-# Disable building extras we won't need
-set(TBB_TEST OFF CACHE BOOL " " FORCE)
-
-set(TBB_BASE_DIR "ext/oneTBB")
-
-# Add the configurations from TBB
-add_subdirectory(${TBB_BASE_DIR})
-
-list(APPEND DEFS ${NANOGUI_EXTRA_DEFS})
-list(APPEND LIBS nanogui ${NANOGUI_EXTRA_LIBS})
-list(APPEND INCS ${NANOGUI_EXTRA_INCS} ${NANOGUI_BASE_DIR}/include)
 
 # ----------------------------------------------------------------
 # Include embree as an subproject
