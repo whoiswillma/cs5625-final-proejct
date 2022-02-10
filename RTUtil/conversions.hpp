@@ -3,7 +3,7 @@
  * RTUtil library
  * 
  * Some handy type conversion utilities for working with Assimp in a
- * program where you want to use Eigen as the principal matrix/vector
+ * program where you want to use GLM as the principal matrix/vector
  * library.
  *
  * Author: srm, Spring 2020
