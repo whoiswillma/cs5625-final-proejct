@@ -19,7 +19,7 @@ using std::make_shared;
 
 namespace RTUtil {
 
-// Function to convert JSON arrays easily to Eigen vectors
+// Function to convert JSON arrays easily to GLM vectors
 
 class json_conversion_error : public nlohmann::detail::exception {
   public:
