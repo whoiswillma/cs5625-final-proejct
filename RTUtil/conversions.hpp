@@ -59,4 +59,7 @@ namespace RTUtil {
             );
     }
 
+    bool parseAreaLight(const std::string &name, float &width, float &height);
+    bool parseAmbientLight(const std::string &name, float &range);
+
 }
