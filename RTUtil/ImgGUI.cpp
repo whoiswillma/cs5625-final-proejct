@@ -25,9 +25,9 @@ nanogui::Screen(nanogui::Vector2i(width, height), "NanoGUI Demo", false) {
 
   // Look up paths to shader source code
   const std::string resourcePath =
-    cpplocate::locatePath("resources/Common", "", nullptr) + "resources/";
-  const std::string fsqVertSrcPath = resourcePath + "Common/shaders/fsq.vert";
-  const std::string srgbFragSrcPath = resourcePath + "Common/shaders/srgb.frag";
+    cpplocate::locatePath("resources/shaders", "", nullptr) + "resources/";
+  const std::string fsqVertSrcPath = resourcePath + "shaders/fsq.vs";
+  const std::string srgbFragSrcPath = resourcePath + "shaders/srgb.fs";
 
   // Compile shader program
   try {
@@ -57,8 +57,8 @@ nanogui::Screen(nanogui::Vector2i(width, height), "NanoGUI Demo", false) {
 
   fsqMesh.reset(new GLWrap::Mesh());
 
-  fsqMesh->setAttribute(srgbShader->getAttribLocation("vert_position"), positions);
-  fsqMesh->setAttribute(srgbShader->getAttribLocation("vert_texCoord"), texCoords);
+  fsqMesh->setAttribute(0, positions);
+  fsqMesh->setAttribute(1, texCoords);
 
   // Allocate texture
   imgTex.reset(new GLWrap::Texture2D(
