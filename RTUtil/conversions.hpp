@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include <Eigen/Core>
+#include <glm/glm.hpp>
 #include <assimp/scene.h>
 #include <assimp/anim.h>
 
@@ -26,10 +26,6 @@ namespace RTUtil {
         return glm::vec3(v.x, v.y, v.z);
     }
 
-    inline glm::vec4 a2g(const aiVector4D &v) {
-        return glm::vec4(v.x, v.y, v.z, v.w);
-    }
-
     inline glm::vec3 a2g(const aiColor3D &c) {
         return glm::vec3(c.r, c.g, c.b);
     }
@@ -38,15 +34,15 @@ namespace RTUtil {
         return glm::vec4(c.r, c.g, c.b, c.a);
     }
 
-    inline glm::quat a2g(const aiQuaternion &q) {
-        return glm::quat(q.w, q.x, q.y, q.z);
-    }
+    // inline glm::quat a2g(const aiQuaternion &q) {
+    //     return glm::quat(q.w, q.x, q.y, q.z);
+    // }
 
     inline glm::mat3 a2g(const aiMatrix3x3 &m) {
         return glm::mat3(
             m.a1, m.b1, m.c1, // first column
             m.a2, m.b2, m.c2, 
-            m.a3, m.b3, m.c3, // last column
+            m.a3, m.b3, m.c3 // last column
             );
     }
 
@@ -55,7 +51,7 @@ namespace RTUtil {
             m.a1, m.b1, m.c1, m.d1, // first column
             m.a2, m.b2, m.c2, m.d2, 
             m.a3, m.b3, m.c3, m.d3,
-            m.a4, m.b4, m.c4, m.d4, // last column
+            m.a4, m.b4, m.c4, m.d4 // last column
             );
     }
 
