@@ -90,9 +90,6 @@ set_property(TARGET embree PROPERTY FOLDER "dependencies")
 list(APPEND INCS "${EMBREE_BASE_DIR}/include")
 list(APPEND LIBS embree)
 
-list(APPEND INCS ${TBB_INCLUDE_DIR})
-list(APPEND LIBS ${TBB_LIBRARY})
-
 # ----------------------------------------------------------------
 # Include assimp as a subproject
 
@@ -145,6 +142,9 @@ target_link_libraries(GLWrap PUBLIC ${LIBS})
 set_property(TARGET GLWrap PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET GLWrap APPEND PROPERTY COMPILE_DEFINITIONS "GLWRAP_BUILD")
 
+# Override library and runtime directories
+set_target_properties(embree PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
 list(APPEND LIBS GLWrap)
 list(APPEND INCS ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -160,6 +160,9 @@ target_include_directories(RTUtil PUBLIC ${INCS})
 target_link_libraries(RTUtil PUBLIC ${LIBS})
 set_property(TARGET RTUtil PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET RTUtil APPEND PROPERTY COMPILE_DEFINITIONS "RTUTIL_BUILD")
+
+# Override library and runtime directories
+set_target_properties(embree PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 list(APPEND LIBS RTUtil)
 list(APPEND INCS ${CMAKE_CURRENT_SOURCE_DIR})
