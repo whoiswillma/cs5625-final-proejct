@@ -57,6 +57,8 @@ struct RTUTIL_EXPORT BSDFQueryRecord {
  */
 class RTUTIL_EXPORT BSDF {
 public:
+    virtual ~BSDF() {}
+
     /**
      * \brief Sample the BSDF and return the importance weight (i.e. the
      * value of the BSDF * cos(theta_o) divided by the probability density 
@@ -120,6 +122,8 @@ public:
     Microfacet(float alpha, float intIOR, float extIOR, const glm::vec3 R)
     : m_alpha(alpha), m_intIOR(intIOR), m_extIOR(extIOR), m_R(R) {
     }
+
+    virtual ~Microfacet() {}
 
     /// Evaluate the BRDF for the given pair of directions
     glm::vec3 eval(const BSDFQueryRecord &bRec) const override;
