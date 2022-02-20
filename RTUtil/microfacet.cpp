@@ -182,7 +182,7 @@ namespace nori {
 	}
 
 	// Write to a stream for debugging
-    std::ostream &Microfacet::stream_write(std::ostream &ost) const {
+    std::ostream &Microfacet::debug_write(std::ostream &ost) const {
     	ost << "Microfacet { alpha " << m_alpha
     		<< "; intIOR " << m_intIOR
     		<< "; extIOR " << m_extIOR
