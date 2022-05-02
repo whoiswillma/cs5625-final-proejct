@@ -195,13 +195,13 @@ void PLApp::setUpNanoguiControls() {
     bias->set_spinnable(true);
     bias->set_min_max_values(1e-5, 1);
 
-    auto near = gui->add_variable("Near", config.shadowNear);
-    near->set_spinnable(true);
-    near->set_min_max_values(1e-5, 1000);
+    auto nearr = gui->add_variable("Near", config.shadowNear);
+    nearr->set_spinnable(true);
+    nearr->set_min_max_values(1e-5, 1000);
 
-    auto far = gui->add_variable("Far", config.shadowFar);
-    far->set_spinnable(true);
-    far->set_min_max_values(1e-5, 1000);
+    auto farr = gui->add_variable("Far", config.shadowFar);
+    farr->set_spinnable(true);
+    farr->set_min_max_values(1e-5, 1000);
 
     auto fov = gui->add_variable("Fov", config.shadowFov);
     fov->set_spinnable(true);
