@@ -7,8 +7,6 @@
 #include <glm/glm.hpp>
 #include "RTUtil/Camera.hpp"
 
-#define MESH_IDX_OCEAN (unsigned int) -1
-
 struct Material {
     glm::vec3 color;
     float roughnessFactor;
@@ -42,17 +40,6 @@ struct Node {
     std::vector<std::shared_ptr<Node>> children;
     std::shared_ptr<Node> parent;
 
-    Node(
-            glm::mat4 transform,
-            std::vector<unsigned int> meshIndices,
-            std::vector<std::shared_ptr<Node>> children,
-            std::shared_ptr<Node> parent
-    ) : transform(transform),
-        meshIndices(std::move(meshIndices)),
-        children(std::move(children)),
-        parent(std::move(parent)) {
-    }
-
     glm::mat4 getTransformTo(const std::shared_ptr<Node>& other);
 };
 
@@ -63,13 +50,6 @@ struct Mesh {
     uint32_t materialIndex;
 };
 
-struct OceanMesh {
-    std::vector<glm::vec3> vertices;
-    std::vector<uint32_t> indices;
-
-    explicit OceanMesh(int n = 128, int m = 128);
-};
-
 struct Scene {
     std::vector<Mesh> meshes;
     std::shared_ptr<RTUtil::PerspectiveCamera> camera;
@@ -78,10 +58,6 @@ struct Scene {
     std::vector<AreaLight> areaLights;
     std::vector<AmbientLight> ambientLights;
     std::shared_ptr<Node> root;
-
-    OceanMesh oceanMesh;
-
-    Scene();
 };
 
 #endif //CS5625_SCENE_H

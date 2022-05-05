@@ -142,12 +142,6 @@ void PLApp::setUpMeshes() {
         meshes.push_back(std::move(glWrapMesh));
     }
 
-    {   // Add Ocean Mesh
-        oceanMesh = std::make_shared<GLWrap::Mesh>();
-        oceanMesh->setAttribute(0, scene->oceanMesh.vertices);
-        oceanMesh->setIndices(scene->oceanMesh.indices, GL_TRIANGLES);
-    }
-
     {   // Add FSQ Mesh
         std::vector<glm::vec3> positions = {
                 glm::vec3(-1.0f, -1.0f, 0.0f),
@@ -327,11 +321,7 @@ void PLApp::draw_contents_flat() {
         prog->uniform("mM", node->getTransformTo(nullptr));
 
         for (unsigned int i : node->meshIndices) {
-            if (i == MESH_IDX_OCEAN) {
-                oceanMesh->drawElements();
-            } else {
-                meshes[i]->drawElements();
-            }
+            meshes[i]->drawElements();
         }
     }
 
@@ -382,16 +372,12 @@ void PLApp::draw_contents_forward() {
         ));
 
         for (unsigned int i : node->meshIndices) {
-            if (i == MESH_IDX_OCEAN) {
-                oceanMesh->drawElements();
-            } else {
-                Mesh mesh = scene->meshes[i];
-                Material material = scene->materials[mesh.materialIndex];
-                prog->uniform("alpha", material.roughnessFactor);
-                prog->uniform("eta", 1.5f);
-                prog->uniform("diffuseReflectance", material.color);
-                meshes[i]->drawElements();
-            }
+            Mesh mesh = scene->meshes[i];
+            Material material = scene->materials[mesh.materialIndex];
+            prog->uniform("alpha", material.roughnessFactor);
+            prog->uniform("eta", 1.5f);
+            prog->uniform("diffuseReflectance", material.color);
+            meshes[i]->drawElements();
         }
     }
 
@@ -422,16 +408,12 @@ void PLApp::deferred_geometry_pass() {
         prog->uniform("mM", node->getTransformTo(nullptr));
 
         for (unsigned int i : node->meshIndices) {
-            if (i == MESH_IDX_OCEAN) {
-                oceanMesh->drawElements();
-            } else {
-                Mesh mesh = scene->meshes[i];
-                Material material = scene->materials[mesh.materialIndex];
-                prog->uniform("alpha", material.roughnessFactor);
-                prog->uniform("eta", 1.5f);
-                prog->uniform("diffuseReflectance", material.color);
-                meshes[i]->drawElements();
-            }
+            Mesh mesh = scene->meshes[i];
+            Material material = scene->materials[mesh.materialIndex];
+            prog->uniform("alpha", material.roughnessFactor);
+            prog->uniform("eta", 1.5f);
+            prog->uniform("diffuseReflectance", material.color);
+            meshes[i]->drawElements();
         }
     }
 
@@ -472,11 +454,7 @@ void PLApp::deferred_shadow_pass(
         prog->uniform("mM", node->getTransformTo(nullptr));
 
         for (unsigned int i : node->meshIndices) {
-            if (i == MESH_IDX_OCEAN) {
-                oceanMesh->drawElements();
-            } else {
-                meshes[i]->drawElements();
-            }
+            meshes[i]->drawElements();
         }
     }
 

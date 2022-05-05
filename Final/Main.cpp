@@ -4,18 +4,9 @@
 
 #include "Import.h"
 #include "PLApp.h"
+#include "OceanScene.h"
 
-void importOcean(const std::shared_ptr<Scene>& scene) {
-    std::shared_ptr<Node> oceanNode = std::make_shared<Node>(
-            glm::identity<glm::mat4>(),
-            std::vector<unsigned int>({MESH_IDX_OCEAN}),
-            std::vector<std::shared_ptr<Node>>(),
-            scene->root
-    );
-    scene->root->children.push_back(oceanNode);
-}
-
-void importFile(const std::shared_ptr<Scene>& scene, const std::string& filename) {
+std::shared_ptr<Scene> importFile(const std::string& filename) {
     Assimp::Importer importer;
     const aiScene* aiScene = importer.ReadFile(
             filename,
@@ -26,20 +17,21 @@ void importFile(const std::shared_ptr<Scene>& scene, const std::string& filename
             | aiProcess_GenNormals
     );
     if (aiScene == nullptr) {
-        printf("error: %s", importer.GetErrorString());
+        std::cerr << "error: " << importer.GetErrorString() << std::endl;
         exit(1);
     }
 
-    importScene(scene, aiScene);
+    return importScene(aiScene);
 }
 
 int main(int argc, char **argv) {
     std::shared_ptr<Scene> scene(new Scene());
+    std::shared_ptr<OceanScene> ocean(new OceanScene());
 
     PLAppConfig config;
     for (int i = 1; i < argc; i++) {
         if (strcmp("--ocean", argv[i]) == 0) {
-            importOcean(scene);
+            config.ocean = true;
             continue;
         }
 
@@ -63,16 +55,41 @@ int main(int argc, char **argv) {
             continue;
         }
 
+        if (strcmp("--add-default-light", argv[i]) == 0) {
+            PointLight light;
+            light.nodeToWorld = glm::identity<glm::mat4>();
+            light.position = glm::vec3(3, 4, 5);
+            light.power = glm::vec3(1000, 1000, 1000);
+            scene->pointLights.push_back(light);
+            continue;
+        }
+
         std::string arg(argv[i]);
         std::smatch match;
 
         if (std::regex_match(arg, match, std::regex("^--scene=(.+)$"))) {
-            importFile(scene, match[1]);
+            scene = importFile(match[1]);
             continue;
         }
 
-        printf("Unable to parse argument: \"%s\"", argv[i]);
+        std::cout << "Unable to parse argument: \"" << argv[i] << "\"" << std::endl;
         exit(1);
+    }
+
+    if (scene->root == nullptr) {
+        scene->root = std::make_shared<Node>();
+    }
+
+    if (scene->camera == nullptr) {
+        scene->camera = std::make_shared<RTUtil::PerspectiveCamera>(
+                glm::vec3(3, 4, 5),
+                glm::vec3(0, 0, 0),
+                glm::vec3(0, 1, 0),
+                1.0f,
+                0.1f,
+                1000.0f,
+                glm::pi<float>() / 6
+        );
     }
 
     nanogui::init();
