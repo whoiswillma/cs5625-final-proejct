@@ -7,10 +7,13 @@
 
 #include <vector>
 #include <glm/glm.hpp>
+#include <complex>
 #include "pocketfft_hdronly.h"
+#include "Tessendorf.h"
 
 struct OceanMesh {
     std::vector<glm::vec3> vertices;
+    std::vector<glm::vec2> texCoords;
     std::vector<uint32_t> indices;
 
     explicit OceanMesh(int n = 128, int m = 128);
@@ -20,11 +23,12 @@ struct OceanScene {
     glm::mat4 transform;
     OceanMesh mesh;
 
-    glm::vec2 sizeMeters;
+    const tessendorf::array2d<std::complex<float>> tessendorfIv;
 
-    explicit OceanScene(
-            glm::vec2 sizeMeters
-    );
+    const glm::ivec2 gridSize;
+    const glm::vec2 sizeMeters;
+
+    OceanScene(glm::vec2 sizeMeters, glm::ivec2 gridSize);
 };
 
 #endif //CS5625_OCEANSCENE_H

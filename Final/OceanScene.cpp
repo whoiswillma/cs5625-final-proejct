@@ -14,6 +14,7 @@ OceanMesh::OceanMesh(int n, int m) {
             float x = (float) i / (float) (n - 1);
 
             vertices.emplace_back(x, 0, y);
+            texCoords.emplace_back(x, y);
         }
     }
 
@@ -37,7 +38,10 @@ OceanMesh::OceanMesh(int n, int m) {
     }
 }
 
-OceanScene::OceanScene(glm::vec2 sizeMeters) : sizeMeters(sizeMeters) {
+OceanScene::OceanScene(glm::vec2 sizeMeters, glm::ivec2 gridSize) :
+        sizeMeters(sizeMeters),
+        gridSize(gridSize),
+        tessendorfIv(tessendorf::sample_initialization_vector(gridSize, {})) {
     const auto I = glm::identity<glm::mat4>();
-    transform = glm::scale(I, glm::vec3(sizeMeters.x, 1, sizeMeters.y));
+    transform = glm::scale(glm::vec3(sizeMeters.x, 1, sizeMeters.y)) * glm::translate(glm::vec3(-0.5, 0, -0.5));
 }

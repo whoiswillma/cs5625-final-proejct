@@ -12,29 +12,30 @@
 #include "RTUtil/Sky.hpp"
 #include "GLWrap/Framebuffer.hpp"
 #include "MulUtil.hpp"
+#include "Tessendorf.h"
 
 PLApp::PLApp(
-        const std::shared_ptr<Scene>& scene,
-        const std::shared_ptr<OceanScene>& oceanScene,
+        const std::shared_ptr<Scene> &scene,
+        const std::shared_ptr<OceanScene> &oceanScene,
         int height,
-        const PLAppConfig& config
+        const PLAppConfig &config
 ) : nanogui::Screen(
         nanogui::Vector2i((int) round(scene->camera->getAspectRatio() * (float) height), height),
         "Pipeline App",
-        true
-),
-        backgroundColor(0.4f, 0.4f, 0.7f, 1.0f),
-        scene(scene),
-        oceanScene(oceanScene),
-        shadingMode(ShadingMode_Deferred),
-        config(config)
-{
+        true),
+    backgroundColor(0.4f, 0.4f, 0.7f, 1.0f),
+    scene(scene),
+    oceanScene(oceanScene),
+    shadingMode(ShadingMode_Deferred),
+    config(config),
+    oceanDisplacementMap(oceanScene->gridSize.x, oceanScene->gridSize.y) {
 
     resetFramebuffers();
     setUpPrograms();
     setUpCamera();
     setUpMeshes();
     setUpNanoguiControls();
+    setUpTextures();
 
     set_visible(true);
 }
@@ -42,14 +43,14 @@ PLApp::PLApp(
 void PLApp::resetFramebuffers() {
     geomBuffer = std::make_shared<GLWrap::Framebuffer>(getViewportSize(), 3);
 
-    std::vector<std::shared_ptr<GLWrap::Framebuffer>*> colorBuffers = {
+    std::vector<std::shared_ptr<GLWrap::Framebuffer> *> colorBuffers = {
             &accBuffer, &temp1, &temp2
     };
 
-    for (auto & colorBufferPtr : colorBuffers) {
+    for (auto &colorBufferPtr: colorBuffers) {
         auto colorBuffer = std::shared_ptr<GLWrap::Framebuffer>(new GLWrap::Framebuffer(
                 getViewportSize(),
-                {{ GL_RGBA32F, GL_RGBA }}
+                {{GL_RGBA32F, GL_RGBA}}
         ));
         colorBuffer->colorTexture().generateMipmap();
 
@@ -132,6 +133,16 @@ void PLApp::setUpPrograms() {
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/forward.fs"}
     }));
 
+    programOceanDeferredGeom = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("ocean deferred geometry pass", {
+            {GL_VERTEX_SHADER,   resourcePath + "shaders/ocean.vs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_geom.fs"}
+    }));
+
+    programOceanDeferredShadow = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("ocean deferred shadow pass", {
+            {GL_VERTEX_SHADER,   resourcePath + "shaders/ocean.vs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shadow.fs"}
+    }));
+
     programSrgb = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("srgb", {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/srgb.fs"}
@@ -144,7 +155,7 @@ void PLApp::setUpCamera() {
 }
 
 void PLApp::setUpMeshes() {
-    for (const Mesh& mesh : scene->meshes) {
+    for (const Mesh &mesh: scene->meshes) {
         std::unique_ptr<GLWrap::Mesh> glWrapMesh = std::make_unique<GLWrap::Mesh>();
 
         glWrapMesh->setAttribute(0, mesh.vertices);
@@ -177,6 +188,7 @@ void PLApp::setUpMeshes() {
     {   // Add Ocean Mesh
         oceanMesh = std::make_shared<GLWrap::Mesh>();
         oceanMesh->setAttribute(0, oceanScene->mesh.vertices);
+        oceanMesh->setAttribute(1, oceanScene->mesh.texCoords);
         oceanMesh->setIndices(oceanScene->mesh.indices, GL_TRIANGLES);
     }
 }
@@ -252,12 +264,18 @@ void PLApp::setUpNanoguiControls() {
 
     auto filtMode = gui->add_variable("Filtering Mode", config.textureFilteringMode);
     filtMode->set_items({"Nearest", "Linear"});
-    filtMode->set_callback([&](const TextureFilteringMode& m) {
+    filtMode->set_callback([&](const TextureFilteringMode &m) {
         config.textureFilteringMode = m;
         resetFramebuffers();
     });
 
     perform_layout();
+}
+
+void PLApp::setUpTextures() {
+    oceanDisplacementTexture = std::make_shared<GLWrap::Texture2D>(
+            oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
+    );
 }
 
 bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
@@ -281,6 +299,34 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
             case GLFW_KEY_3:
                 shadingMode = ShadingMode_Deferred;
                 std::cout << "Switched to deferred shading" << std::endl;
+                return true;
+            case GLFW_KEY_SPACE:
+                timer.setPlaying(!timer.playing());
+                std::cout << "[ ] Set playback: " << (timer.playing() ? "playing" : "paused") << std::endl;
+                return true;
+            case GLFW_KEY_COMMA:
+                timer.offset(-0.01);
+                std::cout << "[<] Skip backward: 0.01s" << std::endl;
+                return true;
+            case GLFW_KEY_LEFT:
+                timer.offset(-0.1);
+                std::cout << "[←] Skip backward: 0.1s" << std::endl;
+                return true;
+            case GLFW_KEY_PERIOD:
+                timer.offset(0.01);
+                std::cout << "[>] Skip forward: 0.01s" << std::endl;
+                return true;
+            case GLFW_KEY_RIGHT:
+                timer.offset(0.1);
+                std::cout << "[→] Skip forward: 0.1s" << std::endl;
+                return true;
+            case GLFW_KEY_UP:
+                timer.setRate(timer.rate() + 0.25);
+                std::cout << "[↑] Set rate: " << timer.rate() << "x" << std::endl;
+                return true;
+            case GLFW_KEY_DOWN:
+                timer.setRate(timer.rate() - 0.25);
+                std::cout << "[↓] Set rate: " << timer.rate() << "x" << std::endl;
                 return true;
             default:
                 break;
@@ -332,13 +378,13 @@ void PLApp::draw_contents_flat() {
         std::shared_ptr<Node> node = nodes.back();
         nodes.pop_back();
 
-        for (const std::shared_ptr<Node>& child : node->children) {
+        for (const std::shared_ptr<Node> &child: node->children) {
             nodes.push_back(child);
         }
 
         prog->uniform("mM", node->getTransformTo(nullptr));
 
-        for (unsigned int i : node->meshIndices) {
+        for (unsigned int i: node->meshIndices) {
             meshes[i]->drawElements();
         }
     }
@@ -422,6 +468,32 @@ void PLApp::draw_contents_forward() {
         prog->uniform("eta", 1.5f);
         prog->uniform("diffuseReflectance", glm::vec3(0.2, 0.3, 0.5));
 
+        tessendorf::height_map(oceanDisplacementMap, oceanScene->tessendorfIv, timer.time());
+
+        float min = oceanDisplacementMap.min();
+        float max = oceanDisplacementMap.max();
+        oceanDisplacementMap.plus(-min);
+        oceanDisplacementMap.times(1 / (max - min));
+
+        prog->uniform("a", max - min);
+        prog->uniform("b", min);
+
+        glBindTexture(GL_TEXTURE_2D, oceanDisplacementTexture->id());
+        glTexImage2D(
+                GL_TEXTURE_2D,
+                0,
+                GL_DEPTH_COMPONENT32F,
+                oceanScene->gridSize.x,
+                oceanScene->gridSize.y,
+                0,
+                GL_DEPTH_COMPONENT,
+                GL_FLOAT,
+                oceanDisplacementMap.data.get()
+        );
+
+        oceanDisplacementTexture->bindToTextureUnit(0);
+        prog->uniform("displacementMap", 0);
+
         oceanMesh->drawElements();
 
         prog->unuse();
@@ -445,13 +517,13 @@ void PLApp::deferred_geometry_pass() {
         std::shared_ptr<Node> node = nodes.back();
         nodes.pop_back();
 
-        for (const std::shared_ptr<Node>& child : node->children) {
+        for (const std::shared_ptr<Node> &child: node->children) {
             nodes.push_back(child);
         }
 
         prog->uniform("mM", node->getTransformTo(nullptr));
 
-        for (unsigned int i : node->meshIndices) {
+        for (unsigned int i: node->meshIndices) {
             Mesh mesh = scene->meshes[i];
             Material material = scene->materials[mesh.materialIndex];
             prog->uniform("alpha", material.roughnessFactor);
@@ -464,20 +536,68 @@ void PLApp::deferred_geometry_pass() {
     prog->unuse();
 }
 
-RTUtil::PerspectiveCamera PLApp::get_light_camera(const PointLight& light) const {
-   return {
-           MulUtil::mulh(light.nodeToWorld, light.position, 1),
-           glm::vec3(0, 0, 0),
-           glm::vec3(0, 1, 0),
-           1,
-           config.shadowNear,
-           config.shadowFar,
-           config.shadowFov
-   };
+void PLApp::update_ocean_displacement_texture(double time) {
+    tessendorf::height_map(oceanDisplacementMap, oceanScene->tessendorfIv, (float) time);
+
+    float min = oceanDisplacementMap.min();
+    float max = oceanDisplacementMap.max();
+    oceanDisplacementMap.plus(-min);
+    oceanDisplacementMap.times(1 / (max - min));
+
+    oceanA = max - min;
+    oceanB = min;
+
+    glBindTexture(GL_TEXTURE_2D, oceanDisplacementTexture->id());
+    glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_DEPTH_COMPONENT32F,
+            oceanScene->gridSize.x,
+            oceanScene->gridSize.y,
+            0,
+            GL_DEPTH_COMPONENT,
+            GL_FLOAT,
+            oceanDisplacementMap.data.get()
+    );
+}
+
+void PLApp::deferred_ocean_geometry_pass() {
+    std::shared_ptr<GLWrap::Program> prog = programOceanDeferredGeom;
+    prog->use();
+
+    prog->uniform("mV", cam->getViewMatrix());
+    prog->uniform("mP", cam->getProjectionMatrix());
+    prog->uniform("mM", oceanScene->transform);
+
+    prog->uniform("alpha", 0.5f);
+    prog->uniform("eta", 1.5f);
+    prog->uniform("diffuseReflectance", glm::vec3(0.2, 0.3, 0.5));
+
+    oceanDisplacementTexture->bindToTextureUnit(0);
+    prog->uniform("displacementMap", 0);
+
+    prog->uniform("a", oceanA);
+    prog->uniform("b", oceanB);
+
+    oceanMesh->drawElements();
+
+    prog->unuse();
+}
+
+RTUtil::PerspectiveCamera PLApp::get_light_camera(const PointLight &light) const {
+    return {
+            MulUtil::mulh(light.nodeToWorld, light.position, 1),
+            glm::vec3(0, 0, 0),
+            glm::vec3(0, 1, 0),
+            1,
+            config.shadowNear,
+            config.shadowFar,
+            config.shadowFov
+    };
 }
 
 void PLApp::deferred_shadow_pass(
-        const PointLight& light
+        const PointLight &light
 ) {
     std::shared_ptr<GLWrap::Program> prog = programDeferredShadow;
     prog->use();
@@ -491,13 +611,13 @@ void PLApp::deferred_shadow_pass(
         std::shared_ptr<Node> node = nodes.back();
         nodes.pop_back();
 
-        for (const std::shared_ptr<Node>& child : node->children) {
+        for (const std::shared_ptr<Node> &child: node->children) {
             nodes.push_back(child);
         }
 
         prog->uniform("mM", node->getTransformTo(nullptr));
 
-        for (unsigned int i : node->meshIndices) {
+        for (unsigned int i: node->meshIndices) {
             meshes[i]->drawElements();
         }
     }
@@ -505,17 +625,37 @@ void PLApp::deferred_shadow_pass(
     prog->unuse();
 }
 
+void PLApp::deferred_ocean_shadow_pass(
+        const PointLight &light
+) {
+    std::shared_ptr<GLWrap::Program> prog = programOceanDeferredShadow;
+    prog->use();
+
+    RTUtil::PerspectiveCamera lightCamera = get_light_camera(light);
+    prog->uniform("mV", lightCamera.getViewMatrix());
+    prog->uniform("mP", lightCamera.getProjectionMatrix());
+    prog->uniform("mM", oceanScene->transform);
+
+    oceanDisplacementTexture->bindToTextureUnit(0);
+    prog->uniform("displacementMap", 0);
+
+    prog->uniform("a", oceanA);
+    prog->uniform("b", oceanB);
+
+    prog->unuse();
+}
+
 glm::ivec2 PLApp::getViewportSize() {
     return {
-        framebuffer_size().x(),
-        framebuffer_size().y()
+            framebuffer_size().x(),
+            framebuffer_size().y()
     };
 }
 
 void PLApp::deferred_lighting_pass(
-        const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
-        const GLWrap::Texture2D& shadowTexture,
-        const PointLight& light
+        const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer,
+        const GLWrap::Texture2D &shadowTexture,
+        const PointLight &light
 ) {
     geomBuffer->colorTexture(0).bindToTextureUnit(0);
     geomBuffer->colorTexture(1).bindToTextureUnit(1);
@@ -551,7 +691,7 @@ void PLApp::deferred_lighting_pass(
     prog->unuse();
 }
 
-void PLApp::deferred_draw_pass(const std::shared_ptr<GLWrap::Framebuffer>& accBuffer) {
+void PLApp::deferred_draw_pass(const std::shared_ptr<GLWrap::Framebuffer> &accBuffer) {
     accBuffer->colorTexture(0).bindToTextureUnit(0);
 
     std::shared_ptr<GLWrap::Program> prog = programSrgb;
@@ -564,8 +704,8 @@ void PLApp::deferred_draw_pass(const std::shared_ptr<GLWrap::Framebuffer>& accBu
 }
 
 void PLApp::deferred_ambient_pass(
-        const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
-        const AmbientLight& light
+        const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer,
+        const AmbientLight &light
 ) {
     geomBuffer->colorTexture(0).bindToTextureUnit(0);
     geomBuffer->colorTexture(1).bindToTextureUnit(1);
@@ -593,7 +733,7 @@ void PLApp::deferred_ambient_pass(
 }
 
 void PLApp::deferred_sky_pass(
-        const GLWrap::Texture2D& image
+        const GLWrap::Texture2D &image
 ) {
     image.bindToTextureUnit(0);
 
@@ -614,7 +754,7 @@ void PLApp::deferred_sky_pass(
 }
 
 void PLApp::deferred_blur_pass(
-        const GLWrap::Texture2D& image,
+        const GLWrap::Texture2D &image,
         glm::vec2 dir,
         float stdev,
         int level
@@ -638,8 +778,8 @@ void PLApp::deferred_blur_pass(
 }
 
 void PLApp::deferred_merge_pass(
-        const GLWrap::Texture2D& image,
-        const GLWrap::Texture2D& blurred
+        const GLWrap::Texture2D &image,
+        const GLWrap::Texture2D &blurred
 ) {
     image.bindToTextureUnit(0);
     blurred.bindToTextureUnit(1);
@@ -655,6 +795,10 @@ void PLApp::deferred_merge_pass(
 }
 
 void PLApp::draw_contents_deferred() {
+    if (config.ocean) {
+        update_ocean_displacement_texture(timer.time());
+    }
+
     geomBuffer->bind();
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -667,6 +811,9 @@ void PLApp::draw_contents_deferred() {
     };
     glDrawBuffers(3, buffers);
     deferred_geometry_pass();
+    if (config.ocean) {
+        deferred_ocean_geometry_pass();
+    }
     geomBuffer->unbind();
 
     accBuffer->bind();
@@ -676,12 +823,12 @@ void PLApp::draw_contents_deferred() {
 
     if (config.pointLightsEnabled) {
         std::vector<PointLight> lights;
-        for (const PointLight& light : scene->pointLights) {
+        for (const PointLight &light: scene->pointLights) {
             lights.push_back(light);
         }
 
         if (config.convertAreaToPoint) {
-            for (const AreaLight& light : scene->areaLights) {
+            for (const AreaLight &light: scene->areaLights) {
                 PointLight p;
                 p.position = light.center;
                 p.nodeToWorld = light.nodeToWorld;
@@ -690,12 +837,15 @@ void PLApp::draw_contents_deferred() {
             }
         }
 
-        for (const PointLight& light : lights) {
+        for (const PointLight &light: lights) {
             shadowMap->bind();
             glClear(GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
             glViewport(0, 0, config.shadowMapResolution.x, config.shadowMapResolution.y);
             deferred_shadow_pass(light);
+            if (config.ocean) {
+                deferred_ocean_shadow_pass(light);
+            }
             shadowMap->unbind();
 
             accBuffer->bind();
@@ -738,7 +888,7 @@ void PLApp::draw_contents_deferred() {
 
         accBuffer->colorTexture().generateMipmap();
 
-        for (const std::pair<float, int>& blurLevel : blurLevels) {
+        for (const std::pair<float, int> &blurLevel: blurLevels) {
             float stdev = blurLevel.first;
             int level = blurLevel.second;
 

@@ -13,6 +13,8 @@
 #include <RTUtil/Camera.hpp>
 #include <RTUtil/CameraController.hpp>
 #include <GLWrap/Framebuffer.hpp>
+#include "Tessendorf.h"
+#include "Timer.h"
 
 enum ShadingMode {
     ShadingMode_Flat,
@@ -29,7 +31,7 @@ struct PLAppConfig {
     glm::ivec2 shadowMapResolution = {1024, 1024};
     float shadowBias = 1e-2;
     float shadowNear = 1;
-    float shadowFar = 20;
+    float shadowFar = 100;
     float shadowFov = 1;
     float exposure = 1;
     float thetaSun = glm::pi<float>() / 3;
@@ -68,6 +70,7 @@ private:
     void setUpMeshes();
     void setUpCamera();
     void setUpPrograms();
+    void setUpTextures();
     void resetFramebuffers();
 
     std::shared_ptr<Scene> scene;
@@ -84,10 +87,7 @@ private:
     std::shared_ptr<GLWrap::Program> programDeferredMerge;
     std::shared_ptr<GLWrap::Program> programSrgb;
 
-    std::shared_ptr<GLWrap::Program> programOceanForward;
-
     std::vector<std::shared_ptr<GLWrap::Mesh>> meshes;
-    std::shared_ptr<GLWrap::Mesh> oceanMesh;
     std::shared_ptr<GLWrap::Mesh> fsqMesh;
 
     std::shared_ptr<RTUtil::PerspectiveCamera> cam;
@@ -140,6 +140,22 @@ private:
             int level
     );
     void deferred_merge_pass(const GLWrap::Texture2D &image, const GLWrap::Texture2D &blurred);
+
+    std::shared_ptr<GLWrap::Program> programOceanForward;
+    std::shared_ptr<GLWrap::Program> programOceanDeferredGeom;
+    std::shared_ptr<GLWrap::Program> programOceanDeferredShadow;
+    std::shared_ptr<GLWrap::Mesh> oceanMesh;
+    tessendorf::array2d<float> oceanDisplacementMap;
+    float oceanA, oceanB;
+    std::shared_ptr<GLWrap::Texture2D> oceanDisplacementTexture;
+
+    void deferred_ocean_geometry_pass();
+
+    Timer timer;
+
+    void update_ocean_displacement_texture(double time);
+
+    void deferred_ocean_shadow_pass(const PointLight &light);
 };
 
 

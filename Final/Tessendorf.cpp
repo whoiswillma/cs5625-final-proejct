@@ -2,19 +2,15 @@
 // Created by William Ma on 5/5/22.
 //
 
+#include "Tessendorf.h"
+
 #ifdef __CYGWIN__
 #define _USE_MATH_DEFINES
 #include <cmath>
 #endif
 
-#include <vector>
-#include <random>
-#include <glm/glm.hpp>
-#include "pocketfft_hdronly.h"
-
 #define PERIOD_T 10.0f
 #define PATCH_SIZE glm::vec2(64, 64)
-#define GRID_SIZE glm::ivec2(128, 128)
 #define GRAVITY 9.81f
 #define WIND_SPEED 12.0f
 #define MAX_WAVE_HEIGHT (WIND_SPEED * WIND_SPEED / GRAVITY)
@@ -42,30 +38,6 @@ namespace tessendorf {
         float t3 = A * t2 * (t2_2 * t2_2);
         return t3 * expf(-k_squared * MIN_WAVE_HEIGHT * MIN_WAVE_HEIGHT);
     }
-
-    template<typename T>
-    struct array2d {
-        size_t size_x, size_y;
-        ptrdiff_t stride_x, stride_y;
-        shared_ptr<T[]> data;
-
-        array2d(size_t size_x, size_t size_y) :
-                size_x(size_x),
-                size_y(size_y),
-                stride_x(sizeof(T) * size_y),
-                stride_y(sizeof(T)),
-                data((T *) malloc(sizeof(T) * size_x * size_y)) {
-        }
-
-        T get(size_t x, size_t y) {
-            return data[x * size_y + y];
-        }
-
-        void set(size_t x, size_t y, T v) {
-            data[x * size_y + y] = v;
-        }
-
-    };
 
     glm::vec2 vec_k(glm::ivec2 vec_i) {
         return 2.0f * (float) M_PI * glm::vec2(vec_i) / PATCH_SIZE;
@@ -132,18 +104,11 @@ namespace tessendorf {
         }
     }
 
-}
+    void height_map(array2d<float> out, const array2d<complex<float>> &iv, float t) {
+        array2d<complex<float>> fa(iv.size_x, iv.size_y);
+        fourier_amplitudes(fa, iv, t);
 
-using namespace tessendorf;
-
-int main() {
-    array2d<complex<float>> iv = test_initialization_vector(GRID_SIZE);
-
-    for (int i = 0; i < 1000; i++) {
-        array2d<complex<float>> fa(GRID_SIZE.x, GRID_SIZE.y);
-        fourier_amplitudes(fa, iv, 1);
-
-        array2d<complex<float>> hf(GRID_SIZE.x, GRID_SIZE.y);
+        array2d<complex<float>> hf(iv.size_x, iv.size_y);
         pocketfft::c2c(
                 {hf.size_x, hf.size_y},
                 {fa.stride_x, fa.stride_y},
@@ -152,7 +117,14 @@ int main() {
                 BACKWARD,
                 fa.data.get(),
                 hf.data.get(),
-                HEIGHT_SCALE
+                HEIGHT_SCALE / 3.0f
         );
+
+        for (int i = 0; i < out.size_x; i++) {
+            for (int j = 0; j < out.size_y; j++) {
+                out.set(i, j, hf.get(i, j).real());
+            }
+        }
     }
+
 }
