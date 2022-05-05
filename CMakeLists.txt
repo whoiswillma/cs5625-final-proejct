@@ -173,6 +173,10 @@ set_target_properties(embree PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_
 list(APPEND LIBS RTUtil)
 list(APPEND INCS ${CMAKE_CURRENT_SOURCE_DIR})
 
+# ----------------------------------------------------------------
+# Include pocketfft as a subproject (header only, very simple)
+
+list(APPEND INCS ${CMAKE_CURRENT_SOURCE_DIR}/pocketfft)
 
 # ----------------------------------------------------------------
 # Create executable targets, one per subdirectory.
@@ -197,3 +201,4 @@ endfunction(createExecutable)
 # Can comment out ones you are not currently concerned with to save compile time.
 createExecutable("Demo")
 createExecutable("Final")
+createExecutable("pocketfft_testing")

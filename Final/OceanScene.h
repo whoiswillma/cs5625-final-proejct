@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <glm/glm.hpp>
+#include "pocketfft_hdronly.h"
 
 struct OceanMesh {
     std::vector<glm::vec3> vertices;
