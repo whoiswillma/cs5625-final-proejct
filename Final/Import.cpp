@@ -107,9 +107,12 @@ std::vector<Material> importMaterials(const aiScene* aiScene) {
 }
 
 std::shared_ptr<Node> importNode(aiNode* aiNode) {
-    std::shared_ptr<Node> node = std::make_shared<Node>();
-
-    node->transform = RTUtil::a2g(aiNode->mTransformation);
+    std::shared_ptr<Node> node = std::make_shared<Node>(
+            RTUtil::a2g(aiNode->mTransformation),
+            std::vector<unsigned int>(),
+            std::vector<std::shared_ptr<Node>>(),
+            nullptr
+    );
 
     for (int i = 0; i < aiNode->mNumMeshes; i++) {
         node->meshIndices.push_back(aiNode->mMeshes[i]);
@@ -194,12 +197,14 @@ void importLights(
     std::cout << "Imported " << aiScene->mNumLights << " lights" << std::endl;
 }
 
-std::shared_ptr<Scene> importScene(const aiScene* aiScene) {
-    std::shared_ptr<Scene> scene(new Scene());
+void importScene(const std::shared_ptr<Scene>& scene, const aiScene* aiScene) {
     scene->meshes = importMeshes(aiScene);
     scene->camera = importCamera(aiScene);
     scene->materials = importMaterials(aiScene);
-    scene->root = importRoot(aiScene);
+
+    auto aiSceneRoot = importRoot(aiScene);
+    scene->root->children.push_back(aiSceneRoot);
+    aiSceneRoot->parent = scene->root;
+
     importLights(aiScene, scene->pointLights, scene->areaLights, scene->ambientLights);
-    return scene;
 }

@@ -5,14 +5,17 @@
 #include "Import.h"
 #include "PLApp.h"
 
-int main(int argc, char **argv) {
-    if (argc <= 1) {
-        std::cerr << "Usage: " << argv[0] << " [scene]" << std::endl;
-        return 1;
-    }
+void importOcean(const std::shared_ptr<Scene>& scene) {
+    std::shared_ptr<Node> oceanNode = std::make_shared<Node>(
+            glm::identity<glm::mat4>(),
+            std::vector<unsigned int>({MESH_IDX_OCEAN}),
+            std::vector<std::shared_ptr<Node>>(),
+            scene->root
+    );
+    scene->root->children.push_back(oceanNode);
+}
 
-    std::string filename = std::string(argv[1]);
-
+void importFile(const std::shared_ptr<Scene>& scene, const std::string& filename) {
     Assimp::Importer importer;
     const aiScene* aiScene = importer.ReadFile(
             filename,
@@ -27,10 +30,19 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    std::shared_ptr<Scene> scene = importScene(aiScene);
+    importScene(scene, aiScene);
+}
+
+int main(int argc, char **argv) {
+    std::shared_ptr<Scene> scene(new Scene());
 
     PLAppConfig config;
-    for (int i = 2; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
+        if (strcmp("--ocean", argv[i]) == 0) {
+            importOcean(scene);
+            continue;
+        }
+
         if (strcmp("--no-point", argv[i]) == 0) {
             config.pointLightsEnabled = false;
             continue;
@@ -48,6 +60,14 @@ int main(int argc, char **argv) {
 
         if (strcmp("--no-bloom", argv[i]) == 0) {
             config.bloomFilterEnabled = false;
+            continue;
+        }
+
+        std::string arg(argv[i]);
+        std::smatch match;
+
+        if (std::regex_match(arg, match, std::regex("^--scene=(.+)$"))) {
+            importFile(scene, match[1]);
             continue;
         }
 
