@@ -1,12 +1,12 @@
 //
 // Created by William Ma on 5/5/22.
 //
-
+#define _USE_MATH_DEFINES
+#include <cmath>
 #include <vector>
 #include <random>
 #include <glm/glm.hpp>
 #include "pocketfft_hdronly.h"
-
 #define PERIOD_T 10.0f
 #define PATCH_SIZE glm::vec2(64, 64)
 #define GRID_SIZE glm::ivec2(128, 128)
