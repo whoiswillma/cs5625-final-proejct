@@ -13,16 +13,22 @@
 #include "GLWrap/Framebuffer.hpp"
 #include "MulUtil.hpp"
 
-PLApp::PLApp(const std::shared_ptr<Scene>& scene, int height, const PLAppConfig& config) :
-        nanogui::Screen(
-                nanogui::Vector2i((int) round(scene->camera->getAspectRatio() * (float) height), height),
-                "Pipeline App",
-                true
-        ),
+PLApp::PLApp(
+        const std::shared_ptr<Scene>& scene,
+        const std::shared_ptr<OceanScene>& oceanScene,
+        int height,
+        const PLAppConfig& config
+) : nanogui::Screen(
+        nanogui::Vector2i((int) round(scene->camera->getAspectRatio() * (float) height), height),
+        "Pipeline App",
+        true
+),
         backgroundColor(0.4f, 0.4f, 0.7f, 1.0f),
         scene(scene),
+        oceanScene(oceanScene),
         shadingMode(ShadingMode_Deferred),
-        config(config) {
+        config(config)
+{
 
     resetFramebuffers();
     setUpPrograms();
@@ -120,6 +126,12 @@ void PLApp::setUpPrograms() {
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_merge.fs"},
     }));
 
+    programOceanForward = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("forward", {
+            {GL_VERTEX_SHADER,   resourcePath + "shaders/ocean.vs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/microfacet.fs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/forward.fs"}
+    }));
+
     programSrgb = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("srgb", {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/srgb.fs"}
@@ -160,6 +172,12 @@ void PLApp::setUpMeshes() {
         fsqMesh = std::make_shared<GLWrap::Mesh>();
         fsqMesh->setAttribute(0, positions);
         fsqMesh->setAttribute(1, texCoords);
+    }
+
+    {   // Add Ocean Mesh
+        oceanMesh = std::make_shared<GLWrap::Mesh>();
+        oceanMesh->setAttribute(0, oceanScene->mesh.vertices);
+        oceanMesh->setIndices(oceanScene->mesh.indices, GL_TRIANGLES);
     }
 }
 
@@ -338,31 +356,21 @@ void PLApp::draw_contents_forward() {
 
     glEnable(GL_DEPTH_TEST);
 
-    std::shared_ptr<GLWrap::Program> prog = programForward;
-    prog->use();
+    PointLight light;
+    if (scene->pointLights.empty()) {
+        light.nodeToWorld = glm::identity<glm::mat4>();
+        light.position = glm::vec3(3, 4, 5);
+        light.power = glm::vec3(1000, 1000, 1000);
+    } else {
+        light = scene->pointLights.front();
+    }
 
-    prog->uniform("mV", cam->getViewMatrix());
-    prog->uniform("mP", cam->getProjectionMatrix());
+    {
+        std::shared_ptr<GLWrap::Program> prog = programForward;
+        prog->use();
 
-    std::vector<std::shared_ptr<Node>> nodes = {scene->root};
-    while (!nodes.empty()) {
-        std::shared_ptr<Node> node = nodes.back();
-        nodes.pop_back();
-
-        for (const std::shared_ptr<Node>& child : node->children) {
-            nodes.push_back(child);
-        }
-
-        prog->uniform("mM", node->getTransformTo(nullptr));
-
-        PointLight light;
-        if (scene->pointLights.empty()) {
-            light.nodeToWorld = glm::identity<glm::mat4>();
-            light.position = glm::vec3(3, 4, 5);
-            light.power = glm::vec3(1000, 1000, 1000);
-        } else {
-            light = scene->pointLights.front();
-        }
+        prog->uniform("mV", cam->getViewMatrix());
+        prog->uniform("mP", cam->getProjectionMatrix());
 
         prog->uniform("lightPower", light.power);
         prog->uniform("vLightPos", MulUtil::mulh(
@@ -371,17 +379,53 @@ void PLApp::draw_contents_forward() {
                 1
         ));
 
-        for (unsigned int i : node->meshIndices) {
-            Mesh mesh = scene->meshes[i];
-            Material material = scene->materials[mesh.materialIndex];
-            prog->uniform("alpha", material.roughnessFactor);
-            prog->uniform("eta", 1.5f);
-            prog->uniform("diffuseReflectance", material.color);
-            meshes[i]->drawElements();
+        std::vector<std::shared_ptr<Node>> nodes = {scene->root};
+        while (!nodes.empty()) {
+            std::shared_ptr<Node> node = nodes.back();
+            nodes.pop_back();
+
+            for (const std::shared_ptr<Node> &child: node->children) {
+                nodes.push_back(child);
+            }
+
+            prog->uniform("mM", node->getTransformTo(nullptr));
+
+            for (unsigned int i: node->meshIndices) {
+                Mesh mesh = scene->meshes[i];
+                Material material = scene->materials[mesh.materialIndex];
+                prog->uniform("alpha", material.roughnessFactor);
+                prog->uniform("eta", 1.5f);
+                prog->uniform("diffuseReflectance", material.color);
+                meshes[i]->drawElements();
+            }
         }
+
+        prog->unuse();
     }
 
-    prog->unuse();
+    if (config.ocean) {
+        std::shared_ptr<GLWrap::Program> prog = programOceanForward;
+        prog->use();
+
+        prog->uniform("mV", cam->getViewMatrix());
+        prog->uniform("mP", cam->getProjectionMatrix());
+        prog->uniform("mM", oceanScene->transform);
+
+        prog->uniform("lightPower", light.power);
+        prog->uniform("vLightPos", MulUtil::mulh(
+                cam->getViewMatrix() * light.nodeToWorld,
+                light.position,
+                1
+        ));
+
+        prog->uniform("alpha", 0.5f);
+        prog->uniform("eta", 1.5f);
+        prog->uniform("diffuseReflectance", glm::vec3(0.2, 0.3, 0.5));
+
+        oceanMesh->drawElements();
+
+        prog->unuse();
+    }
 }
 
 /*****************************************************************************

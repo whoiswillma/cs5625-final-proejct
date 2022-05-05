@@ -16,7 +16,14 @@ struct OceanMesh {
 };
 
 struct OceanScene {
+    glm::mat4 transform;
+    OceanMesh mesh;
 
+    glm::vec2 sizeMeters;
+
+    explicit OceanScene(
+            glm::vec2 sizeMeters
+    );
 };
 
 #endif //CS5625_OCEANSCENE_H

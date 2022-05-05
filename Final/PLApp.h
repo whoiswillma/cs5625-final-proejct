@@ -4,6 +4,7 @@
 #include <map>
 
 #include "Scene.h"
+#include "OceanScene.h"
 
 #include <nanogui/screen.h>
 
@@ -47,7 +48,12 @@ struct PLAppConfig {
 
 class PLApp : nanogui::Screen {
 public:
-    PLApp(const std::shared_ptr<Scene>& scene, int height, const PLAppConfig& config = PLAppConfig());
+    PLApp(
+            const std::shared_ptr<Scene>& scene,
+            const std::shared_ptr<OceanScene>& oceanScene,
+            int height,
+            const PLAppConfig& config = PLAppConfig()
+    );
 
     virtual bool keyboard_event(int key, int scancode, int action, int modifiers) override;
     virtual bool mouse_button_event(const nanogui::Vector2i &p, int button, bool down, int modifiers) override;
@@ -65,6 +71,7 @@ private:
     void resetFramebuffers();
 
     std::shared_ptr<Scene> scene;
+    std::shared_ptr<OceanScene> oceanScene;
 
     std::shared_ptr<GLWrap::Program> programFlat;
     std::shared_ptr<GLWrap::Program> programForward;
@@ -77,7 +84,10 @@ private:
     std::shared_ptr<GLWrap::Program> programDeferredMerge;
     std::shared_ptr<GLWrap::Program> programSrgb;
 
+    std::shared_ptr<GLWrap::Program> programOceanForward;
+
     std::vector<std::shared_ptr<GLWrap::Mesh>> meshes;
+    std::shared_ptr<GLWrap::Mesh> oceanMesh;
     std::shared_ptr<GLWrap::Mesh> fsqMesh;
 
     std::shared_ptr<RTUtil::PerspectiveCamera> cam;

@@ -39,12 +39,13 @@ int main(int argc, char **argv) {
             glm::pi<float>() / 6
     );
 
-    std::shared_ptr<OceanScene> ocean;
+    std::shared_ptr<OceanScene> ocean = std::make_shared<OceanScene>(
+            glm::vec2(5, 5)
+    );
 
     PLAppConfig config;
     for (int i = 1; i < argc; i++) {
         if (strcmp("--ocean", argv[i]) == 0) {
-            ocean = std::make_shared<OceanScene>();
             config.ocean = true;
             continue;
         }
@@ -97,6 +98,6 @@ int main(int argc, char **argv) {
 
     nanogui::init();
 
-    nanogui::ref<PLApp> app = new PLApp(scene, 700, config);
+    nanogui::ref<PLApp> app = new PLApp(scene, ocean, 700, config);
     nanogui::mainloop(16);
 }
