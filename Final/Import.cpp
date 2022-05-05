@@ -50,8 +50,8 @@ glm::mat4 nodeToWorldTransform(aiNode* node) {
 
 std::shared_ptr<RTUtil::PerspectiveCamera> importCamera(const aiScene* aiScene) {
     if (aiScene->mNumCameras >= 1) {
-        aiCamera* camera = aiScene->mCameras[0];
-        aiNode* cameraNode = aiScene->mRootNode->FindNode(camera->mName);
+        aiCamera *camera = aiScene->mCameras[0];
+        aiNode *cameraNode = aiScene->mRootNode->FindNode(camera->mName);
         assert(cameraNode != nullptr);
 
         float fovy = 2.0f * glm::atan(glm::tan(camera->mHorizontalFOV / 2.0f) / camera->mAspect);
@@ -68,7 +68,6 @@ std::shared_ptr<RTUtil::PerspectiveCamera> importCamera(const aiScene* aiScene) 
                 camera->mClipPlaneFar,
                 fovy
         );
-
     } else {
         std::cout << "Using default camera" << std::endl;
 

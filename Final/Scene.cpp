@@ -24,6 +24,16 @@ Scene::Scene() {
         std::vector<std::shared_ptr<Node>>(),
         nullptr
     );
+
+    camera = std::make_shared<RTUtil::PerspectiveCamera>(
+            glm::vec3(3, 4, 5),
+            glm::vec3(0, 0, 0),
+            glm::vec3(0, 1, 0),
+            1.0f,
+            0.1f,
+            1000.0f,
+            glm::pi<float>() / 6
+    );
 }
 
 OceanMesh::OceanMesh(int n, int m) {
