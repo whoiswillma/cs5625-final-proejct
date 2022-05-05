@@ -24,13 +24,27 @@ std::shared_ptr<Scene> importFile(const std::string& filename) {
     return importScene(aiScene);
 }
 
+const std::regex SCENE_ARG_REGEX("^--scene=(.+)$");
+
 int main(int argc, char **argv) {
-    std::shared_ptr<Scene> scene(new Scene());
-    std::shared_ptr<OceanScene> ocean(new OceanScene());
+    std::shared_ptr<Scene> scene = std::make_shared<Scene>();
+    scene->root = std::make_shared<Node>();
+    scene->camera = std::make_shared<RTUtil::PerspectiveCamera>(
+            glm::vec3(3, 4, 5),
+            glm::vec3(0, 0, 0),
+            glm::vec3(0, 1, 0),
+            1.0f,
+            0.1f,
+            1000.0f,
+            glm::pi<float>() / 6
+    );
+
+    std::shared_ptr<OceanScene> ocean;
 
     PLAppConfig config;
     for (int i = 1; i < argc; i++) {
         if (strcmp("--ocean", argv[i]) == 0) {
+            ocean = std::make_shared<OceanScene>();
             config.ocean = true;
             continue;
         }
@@ -67,29 +81,18 @@ int main(int argc, char **argv) {
         std::string arg(argv[i]);
         std::smatch match;
 
-        if (std::regex_match(arg, match, std::regex("^--scene=(.+)$"))) {
+        if (std::regex_match(arg, match, SCENE_ARG_REGEX)) {
+            if (i != 1) {
+                std::cerr << "--scene must be the first argument" << std::endl;
+                exit(1);
+            }
+
             scene = importFile(match[1]);
             continue;
         }
 
-        std::cout << "Unable to parse argument: \"" << argv[i] << "\"" << std::endl;
+        std::cerr << "Unable to parse argument: \"" << argv[i] << "\"" << std::endl;
         exit(1);
-    }
-
-    if (scene->root == nullptr) {
-        scene->root = std::make_shared<Node>();
-    }
-
-    if (scene->camera == nullptr) {
-        scene->camera = std::make_shared<RTUtil::PerspectiveCamera>(
-                glm::vec3(3, 4, 5),
-                glm::vec3(0, 0, 0),
-                glm::vec3(0, 1, 0),
-                1.0f,
-                0.1f,
-                1000.0f,
-                glm::pi<float>() / 6
-        );
     }
 
     nanogui::init();
