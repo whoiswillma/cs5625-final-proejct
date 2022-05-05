@@ -137,7 +137,6 @@ void importLights(
         std::vector<AreaLight>& areaLights,
         std::vector<AmbientLight>& ambientLights
 ) {
-
     for (int i = 0; i < aiScene->mNumLights; i++) {
         aiLight* aiLight = aiScene->mLights[i];
 

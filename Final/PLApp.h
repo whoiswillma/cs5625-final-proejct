@@ -77,6 +77,7 @@ private:
 
     std::vector<std::shared_ptr<GLWrap::Mesh>> meshes;
     std::shared_ptr<GLWrap::Mesh> fsqMesh;
+    std::shared_ptr<GLWrap::Mesh> oceanMesh;
 
     std::shared_ptr<RTUtil::PerspectiveCamera> cam;
     std::unique_ptr<RTUtil::DefaultCC> cc;

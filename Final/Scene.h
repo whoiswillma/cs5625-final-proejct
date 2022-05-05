@@ -67,7 +67,7 @@ struct OceanMesh {
     std::vector<glm::vec3> vertices;
     std::vector<uint32_t> indices;
 
-    explicit OceanMesh(int n = 100, int m = 100);
+    explicit OceanMesh(int n = 128, int m = 128);
 };
 
 struct Scene {
