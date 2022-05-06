@@ -28,7 +28,15 @@ PLApp::PLApp(
     oceanScene(oceanScene),
     shadingMode(ShadingMode_Deferred),
     config(config),
-    oceanDisplacementMap(oceanScene->gridSize.x, oceanScene->gridSize.y) {
+    oceanBuffers({
+         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
+         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
+         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
+         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
+         tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
+         tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
+         tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
+    }) {
 
     resetFramebuffers();
     setUpPrograms();
@@ -127,7 +135,7 @@ void PLApp::setUpPrograms() {
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_merge.fs"},
     }));
 
-    programOceanForward = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("forward", {
+    programOceanForward = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("ocean forward", {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/ocean.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/microfacet.fs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/forward.fs"}
@@ -274,6 +282,14 @@ void PLApp::setUpNanoguiControls() {
 
 void PLApp::setUpTextures() {
     oceanDisplacementTexture = std::make_shared<GLWrap::Texture2D>(
+            oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
+    );
+
+    oceanGradXTexture = std::make_shared<GLWrap::Texture2D>(
+            oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
+    );
+
+    oceanGradZTexture = std::make_shared<GLWrap::Texture2D>(
             oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
     );
 }
@@ -468,31 +484,22 @@ void PLApp::draw_contents_forward() {
         prog->uniform("eta", 1.5f);
         prog->uniform("diffuseReflectance", glm::vec3(0.2, 0.3, 0.5));
 
-        tessendorf::height_map(oceanDisplacementMap, oceanScene->tessendorfIv, timer.time());
-
-        float min = oceanDisplacementMap.min();
-        float max = oceanDisplacementMap.max();
-        oceanDisplacementMap.plus(-min);
-        oceanDisplacementMap.times(1 / (max - min));
-
-        prog->uniform("a", max - min);
-        prog->uniform("b", min);
-
-        glBindTexture(GL_TEXTURE_2D, oceanDisplacementTexture->id());
-        glTexImage2D(
-                GL_TEXTURE_2D,
-                0,
-                GL_DEPTH_COMPONENT32F,
-                oceanScene->gridSize.x,
-                oceanScene->gridSize.y,
-                0,
-                GL_DEPTH_COMPONENT,
-                GL_FLOAT,
-                oceanDisplacementMap.data.get()
-        );
+        update_ocean_textures(timer.time());
 
         oceanDisplacementTexture->bindToTextureUnit(0);
         prog->uniform("displacementMap", 0);
+        prog->uniform("displacementA", oceanBuffers.displacementA);
+        prog->uniform("displacementB", oceanBuffers.displacementB);
+
+        oceanGradXTexture->bindToTextureUnit(1);
+        prog->uniform("gradXMap", 1);
+        prog->uniform("gradXA", oceanBuffers.gradXA);
+        prog->uniform("gradXB", oceanBuffers.gradXB);
+
+        oceanGradZTexture->bindToTextureUnit(2);
+        prog->uniform("gradZMap", 2);
+        prog->uniform("gradZA", oceanBuffers.gradZA);
+        prog->uniform("gradZB", oceanBuffers.gradZB);
 
         oceanMesh->drawElements();
 
@@ -536,29 +543,46 @@ void PLApp::deferred_geometry_pass() {
     prog->unuse();
 }
 
-void PLApp::update_ocean_displacement_texture(double time) {
-    tessendorf::height_map(oceanDisplacementMap, oceanScene->tessendorfIv, (float) time);
+void texture_normalize_and_store(
+        const std::shared_ptr<GLWrap::Texture2D>& texture,
+        float &scale,
+        float &offset,
+        tessendorf::array2d<float> buffer
+) {
+    float min = buffer.min();
+    float max = buffer.max();
+    buffer.plus(-min);
+    buffer.times(1 / (max - min));
 
-    float min = oceanDisplacementMap.min();
-    float max = oceanDisplacementMap.max();
-    oceanDisplacementMap.plus(-min);
-    oceanDisplacementMap.times(1 / (max - min));
+    scale = max - min;
+    offset = min;
 
-    oceanA = max - min;
-    oceanB = min;
-
-    glBindTexture(GL_TEXTURE_2D, oceanDisplacementTexture->id());
+    glBindTexture(GL_TEXTURE_2D, texture->id());
     glTexImage2D(
             GL_TEXTURE_2D,
             0,
             GL_DEPTH_COMPONENT32F,
-            oceanScene->gridSize.x,
-            oceanScene->gridSize.y,
+            buffer.size_x,
+            buffer.size_y,
             0,
             GL_DEPTH_COMPONENT,
             GL_FLOAT,
-            oceanDisplacementMap.data.get()
+            buffer.data.get()
     );
+}
+
+void PLApp::update_ocean_textures(double time) {
+    tessendorf::fourier_amplitudes(oceanBuffers.fourierAmplitudes, oceanScene->tessendorfIv, (float) time, oceanScene->config);
+    tessendorf::ifft(oceanBuffers.displacementMap, oceanBuffers.fourierAmplitudes, oceanBuffers.buffer, true);
+    texture_normalize_and_store(oceanDisplacementTexture, oceanBuffers.displacementA, oceanBuffers.displacementB, oceanBuffers.displacementMap);
+
+    tessendorf::gradient_amplitudes(oceanBuffers.gradientXAmplitudes, oceanBuffers.gradientZAmplitudes, oceanBuffers.fourierAmplitudes, oceanScene->config);
+
+    tessendorf::ifft(oceanBuffers.gradXMap, oceanBuffers.gradientXAmplitudes, oceanBuffers.buffer, false);
+    texture_normalize_and_store(oceanGradXTexture, oceanBuffers.gradXA, oceanBuffers.gradXB, oceanBuffers.gradXMap);
+
+    tessendorf::ifft(oceanBuffers.gradZMap, oceanBuffers.gradientZAmplitudes, oceanBuffers.buffer, false);
+    texture_normalize_and_store(oceanGradZTexture, oceanBuffers.gradZA, oceanBuffers.gradZB, oceanBuffers.gradZMap);
 }
 
 void PLApp::deferred_ocean_geometry_pass() {
@@ -575,9 +599,18 @@ void PLApp::deferred_ocean_geometry_pass() {
 
     oceanDisplacementTexture->bindToTextureUnit(0);
     prog->uniform("displacementMap", 0);
+    prog->uniform("displacementA", oceanBuffers.displacementA);
+    prog->uniform("displacementB", oceanBuffers.displacementB);
 
-    prog->uniform("a", oceanA);
-    prog->uniform("b", oceanB);
+    oceanGradXTexture->bindToTextureUnit(1);
+    prog->uniform("gradXMap", 1);
+    prog->uniform("gradXA", oceanBuffers.gradXA);
+    prog->uniform("gradXB", oceanBuffers.gradXB);
+
+    oceanGradZTexture->bindToTextureUnit(2);
+    prog->uniform("gradZMap", 2);
+    prog->uniform("gradZA", oceanBuffers.gradZA);
+    prog->uniform("gradZB", oceanBuffers.gradZB);
 
     oceanMesh->drawElements();
 
@@ -638,9 +671,18 @@ void PLApp::deferred_ocean_shadow_pass(
 
     oceanDisplacementTexture->bindToTextureUnit(0);
     prog->uniform("displacementMap", 0);
+    prog->uniform("displacementA", oceanBuffers.displacementA);
+    prog->uniform("displacementB", oceanBuffers.displacementB);
 
-    prog->uniform("a", oceanA);
-    prog->uniform("b", oceanB);
+    oceanGradXTexture->bindToTextureUnit(1);
+    prog->uniform("gradXMap", 1);
+    prog->uniform("gradXA", oceanBuffers.gradXA);
+    prog->uniform("gradXB", oceanBuffers.gradXB);
+
+    oceanGradZTexture->bindToTextureUnit(2);
+    prog->uniform("gradZMap", 2);
+    prog->uniform("gradZA", oceanBuffers.gradZA);
+    prog->uniform("gradZB", oceanBuffers.gradZB);
 
     prog->unuse();
 }
@@ -796,7 +838,7 @@ void PLApp::deferred_merge_pass(
 
 void PLApp::draw_contents_deferred() {
     if (config.ocean) {
-        update_ocean_displacement_texture(timer.time());
+        update_ocean_textures(timer.time());
     }
 
     geomBuffer->bind();

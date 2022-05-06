@@ -39,9 +39,19 @@ OceanMesh::OceanMesh(int n, int m) {
 }
 
 OceanScene::OceanScene(glm::vec2 sizeMeters, glm::ivec2 gridSize) :
+        mesh(gridSize.x, gridSize.y),
         sizeMeters(sizeMeters),
         gridSize(gridSize),
-        tessendorfIv(tessendorf::sample_initialization_vector(gridSize, {})) {
+        tessendorfIv(tessendorf::sample_initialization_vector(gridSize, {})),
+        config({
+            10.0f,
+            sizeMeters,
+            12.0f,
+            glm::normalize(glm::vec2(1.0, 0.2)),
+            3.0f
+        }){
     const auto I = glm::identity<glm::mat4>();
-    transform = glm::scale(glm::vec3(sizeMeters.x, 1, sizeMeters.y)) * glm::translate(glm::vec3(-0.5, 0, -0.5));
+    transform = glm::translate(glm::vec3(0, -1, 0))
+            * glm::scale(glm::vec3(sizeMeters.x, 1.0f, sizeMeters.y))
+            * glm::translate(glm::vec3(-0.5, 0, -0.5));
 }

@@ -7,6 +7,7 @@
 #include <cmath>
 #endif
 
+#include <iostream>
 #include <vector>
 #include <random>
 #include <glm/glm.hpp>
@@ -14,14 +15,14 @@
 
 #define PERIOD_T 10.0f
 #define PATCH_SIZE glm::vec2(64, 64)
-#define GRID_SIZE glm::ivec2(128, 128)
+#define GRID_SIZE glm::ivec2(10, 10)
 #define GRAVITY 9.81f
 #define WIND_SPEED 12.0f
 #define MAX_WAVE_HEIGHT (WIND_SPEED * WIND_SPEED / GRAVITY)
 #define WIND_DIR glm::normalize(glm::vec2(0.2, 1))
 #define MIN_WAVE_HEIGHT (1e-4f * MAX_WAVE_HEIGHT)
 #define M_IMAG complex<float>(0.0f, 1.0f)
-#define HEIGHT_SCALE (1.0f / PATCH_SIZE.x)
+#define HEIGHT_SCALE (1.0f / 3.0f)
 
 namespace tessendorf {
 
@@ -132,6 +133,25 @@ namespace tessendorf {
         }
     }
 
+    void gradient_amplitudes(
+            array2d<complex<float>> out_x,
+            array2d<complex<float>> out_y,
+            array2d<complex<float>> fourier_amplitudes
+    ) {
+        for (int i = 0; i < fourier_amplitudes.size_x; i++) {
+            for (int j = 0; j < fourier_amplitudes.size_y; j++) {
+                glm::ivec2 vec_i(
+                        (i + fourier_amplitudes.size_x / 2) % fourier_amplitudes.size_x - fourier_amplitudes.size_x / 2,
+                        (j + fourier_amplitudes.size_y / 2) % fourier_amplitudes.size_y - fourier_amplitudes.size_y / 2
+                );
+                glm::vec2 k = vec_k(vec_i);
+                complex<float> fa = fourier_amplitudes.get(i, j);
+                out_x.set(i, j, M_IMAG * k.x * fa);
+                out_y.set(i, j, M_IMAG * k.y * fa);
+            }
+        }
+    }
+
 }
 
 using namespace tessendorf;
@@ -139,20 +159,123 @@ using namespace tessendorf;
 int main() {
     array2d<complex<float>> iv = test_initialization_vector(GRID_SIZE);
 
-    for (int i = 0; i < 1000; i++) {
-        array2d<complex<float>> fa(GRID_SIZE.x, GRID_SIZE.y);
-        fourier_amplitudes(fa, iv, 1);
+    array2d<complex<float>> in(GRID_SIZE.x, GRID_SIZE.y);
 
-        array2d<complex<float>> hf(GRID_SIZE.x, GRID_SIZE.y);
-        pocketfft::c2c(
-                {hf.size_x, hf.size_y},
-                {fa.stride_x, fa.stride_y},
-                {hf.stride_x, hf.stride_y},
-                {0, 1},
-                BACKWARD,
-                fa.data.get(),
-                hf.data.get(),
-                HEIGHT_SCALE
-        );
+    for (int i = 0; i < GRID_SIZE.x; i++) {
+        for (int j = 0; j < GRID_SIZE.y; j++) {
+            in.set(i, j, cos(2 * M_PI * i / GRID_SIZE.x) + cos(2 * M_PI * j / GRID_SIZE.y));
+        }
     }
+
+    for (int i = 0; i < GRID_SIZE.x; i++) {
+        for (int j = 0; j < GRID_SIZE.y; j++) {
+            cout << in.get(i, j) << " ";
+        }
+        cout << endl;
+    }
+
+    cout << endl;
+
+    array2d<complex<float>> out(GRID_SIZE.x, GRID_SIZE.y);
+    pocketfft::c2c(
+            {in.size_x, in.size_y},
+            {in.stride_x, in.stride_y},
+            {out.stride_x, out.stride_y},
+            {0, 1},
+            BACKWARD,
+            in.data.get(),
+            out.data.get(),
+            1.0f / sqrt((float) GRID_SIZE.x * GRID_SIZE.y)
+    );
+
+    for (int i = 0; i < GRID_SIZE.x; i++) {
+        for (int j = 0; j < GRID_SIZE.y; j++) {
+            cout << out.get(i, j) << " ";
+        }
+        cout << endl;
+    }
+
+//    array2d<complex<float>> ga_x(GRID_SIZE.x, GRID_SIZE.y);
+//    array2d<complex<float>> ga_y(GRID_SIZE.x, GRID_SIZE.y);
+//    gradient_amplitudes(ga_x, ga_y, fa);
+//
+//    array2d<complex<float>> n_x(GRID_SIZE.x, GRID_SIZE.y);
+//    array2d<complex<float>> n_y(GRID_SIZE.x, GRID_SIZE.y);
+//
+//    pocketfft::c2c(
+//            {ga_x.size_x, ga_x.size_y},
+//            {ga_x.stride_x, ga_x.stride_y},
+//            {n_x.stride_x, n_x.stride_y},
+//            {0, 1},
+//            BACKWARD,
+//            ga_x.data.get(),
+//            n_x.data.get(),
+//            1.0f
+//    );
+//
+//    pocketfft::c2c(
+//            {ga_y.size_x, ga_y.size_y},
+//            {ga_y.stride_x, ga_y.stride_y},
+//            {n_y.stride_x, n_y.stride_y},
+//            {0, 1},
+//            BACKWARD,
+//            ga_y.data.get(),
+//            n_y.data.get(),
+//            1.0f
+//    );
+//
+//    for (int i = 0; i < GRID_SIZE.x; i++) {
+//        for (int j = 0; j < GRID_SIZE.y; j++) {
+//            std::cout << "(" << n_x.get(i, j) << ", " << n_y.get(i, j) << ")" << " ";
+//        }
+//        std::cout << std::endl;
+//    }
+
+//    for (int i = 0; i < 1000; i++) {
+//        array2d<complex<float>> fa(GRID_SIZE.x, GRID_SIZE.y);
+//        fourier_amplitudes(fa, iv, i);
+//
+//        array2d<complex<float>> hf(GRID_SIZE.x, GRID_SIZE.y);
+//        pocketfft::c2c(
+//                {hf.size_x, hf.size_y},
+//                {fa.stride_x, fa.stride_y},
+//                {hf.stride_x, hf.stride_y},
+//                {0, 1},
+//                BACKWARD,
+//                fa.data.get(),
+//                hf.data.get(),
+//                HEIGHT_SCALE
+//        );
+//
+//        array2d<complex<float>> ga_x(GRID_SIZE.x, GRID_SIZE.y);
+//        array2d<complex<float>> ga_y(GRID_SIZE.x, GRID_SIZE.y);
+//        gradient_amplitudes(ga_x, ga_y, fa, i);
+//
+//        array2d<complex<float>> n_x(GRID_SIZE.x, GRID_SIZE.y);
+//        array2d<complex<float>> n_y(GRID_SIZE.x, GRID_SIZE.y);
+//
+//        pocketfft::c2c(
+//                {ga_x.size_x, ga_x.size_y},
+//                {ga_x.stride_x, ga_x.stride_y},
+//                {n_x.stride_x, n_x.stride_y},
+//                {0, 1},
+//                BACKWARD,
+//                ga_x.data.get(),
+//                n_x.data.get(),
+//                1.0f
+//        );
+//
+//        pocketfft::c2c(
+//                {ga_y.size_x, ga_y.size_y},
+//                {ga_y.stride_x, ga_y.stride_y},
+//                {n_y.stride_x, n_y.stride_y},
+//                {0, 1},
+//                BACKWARD,
+//                ga_x.data.get(),
+//                n_y.data.get(),
+//                1.0f
+//        );
+//
+//        array2d<complex<float>>
+//    }
 }

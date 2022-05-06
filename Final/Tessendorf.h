@@ -13,6 +13,24 @@
 
 namespace tessendorf {
 
+    struct config {
+
+        const float period;
+        const glm::vec2 patch_size;
+        const float wind_speed;
+        const glm::vec2 wind_dir;
+        const float spectrum_scale;
+
+        float max_wave_height() const {
+            return wind_speed * wind_speed / 9.81f;
+        }
+
+        float min_wave_height() const {
+            return 1e-4f * max_wave_height();
+        }
+
+    };
+
     using namespace pocketfft::detail;
     using namespace std;
 
@@ -89,7 +107,16 @@ namespace tessendorf {
 
     array2d<complex<float>> test_initialization_vector(glm::ivec2 size);
 
-    void height_map(array2d<float> out, const array2d<complex<float>> &iv, float t);
+    void fourier_amplitudes(array2d<complex<float>> out, const array2d<complex<float>> &iv, float t, config config);
+
+    void gradient_amplitudes(
+            array2d<complex<float>> out_x,
+            array2d<complex<float>> out_y,
+            array2d<complex<float>> fourier_amplitudes,
+            config config
+    );
+
+    void ifft(array2d<float> out, const array2d<complex<float>> &fa, array2d<complex<float>> buffer, bool normalize);
 }
 
 #endif //CS5625_TESSENDORF_H
