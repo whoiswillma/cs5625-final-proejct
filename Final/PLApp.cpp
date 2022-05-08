@@ -91,7 +91,7 @@ void PLApp::setUpPrograms() {
     }));
 
     programForward = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("forward", {
-            {GL_VERTEX_SHADER,   resourcePath + "shaders/forward.vs"},
+            {GL_VERTEX_SHADER,   resourcePath + "shaders/deferred.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/microfacet.fs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/forward.fs"}
     }));
@@ -168,6 +168,8 @@ void PLApp::setUpMeshes() {
 
         glWrapMesh->setAttribute(0, mesh.vertices);
         glWrapMesh->setAttribute(1, mesh.normals);
+        glWrapMesh->setAttribute(2, mesh.boneIndices);
+        glWrapMesh->setAttribute(3, mesh.boneWeights);
         glWrapMesh->setIndices(mesh.indices, GL_TRIANGLES);
 
         meshes.push_back(std::move(glWrapMesh));
@@ -458,6 +460,21 @@ void PLApp::draw_contents_forward() {
                 prog->uniform("alpha", material.roughnessFactor);
                 prog->uniform("eta", 1.5f);
                 prog->uniform("diffuseReflectance", material.color);
+
+                prog->uniform("useBones", !mesh.bones.empty());
+                if (!mesh.bones.empty()) {
+                    for (int j = 0; j < mesh.bones.size(); j++) {
+                        auto bone = mesh.bones[j];
+                        std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+                        glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
+
+                        prog->uniform(
+                                "boneTransforms[" + std::to_string(j) + "]",
+                                boneTransform
+                        );
+                    }
+                }
+
                 meshes[i]->drawElements();
             }
         }
@@ -536,6 +553,21 @@ void PLApp::deferred_geometry_pass() {
             prog->uniform("alpha", material.roughnessFactor);
             prog->uniform("eta", 1.5f);
             prog->uniform("diffuseReflectance", material.color);
+
+            prog->uniform("useBones", !mesh.bones.empty());
+            if (!mesh.bones.empty()) {
+                for (int j = 0; j < mesh.bones.size(); j++) {
+                    auto bone = mesh.bones[j];
+                    std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+                    glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
+
+                    prog->uniform(
+                            "boneTransforms[" + std::to_string(j) + "]",
+                            boneTransform
+                    );
+                }
+            }
+
             meshes[i]->drawElements();
         }
     }
@@ -651,6 +683,21 @@ void PLApp::deferred_shadow_pass(
         prog->uniform("mM", node->getTransformTo(nullptr));
 
         for (unsigned int i: node->meshIndices) {
+            Mesh mesh = scene->meshes[i];
+
+            prog->uniform("useBones", !mesh.bones.empty());
+            if (!mesh.bones.empty()) {
+                for (int j = 0; j < mesh.bones.size(); j++) {
+                    auto bone = mesh.bones[j];
+                    std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+                    glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
+
+                    prog->uniform(
+                            "boneTransforms[" + std::to_string(j) + "]",
+                            boneTransform
+                    );
+                }
+            }
             meshes[i]->drawElements();
         }
     }
@@ -966,6 +1013,8 @@ void PLApp::draw_contents_deferred() {
 
 void PLApp::draw_contents() {
     GLWrap::checkGLError("drawContents start");
+
+    scene->animate(timer.time());
 
     switch (shadingMode) {
         case ShadingMode_Flat:

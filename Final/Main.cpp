@@ -15,6 +15,7 @@ std::shared_ptr<Scene> importFile(const std::string& filename) {
             | aiProcess_JoinIdenticalVertices
             | aiProcess_SortByPType
             | aiProcess_GenNormals
+            | aiProcess_LimitBoneWeights
     );
     if (aiScene == nullptr) {
         std::cerr << "error: " << importer.GetErrorString() << std::endl;
@@ -72,17 +73,20 @@ int main(int argc, char **argv) {
         }
 
         if (strcmp("--add-default-light", argv[i]) == 0) {
-            PointLight light;
-            light.nodeToWorld = glm::identity<glm::mat4>();
-            light.position = glm::vec3(2, 50, 5);
-            light.power = 100000.0f * glm::vec3(1, 1, 1);
-            scene->pointLights.push_back(light);
+            {
+                PointLight light;
+                light.nodeToWorld = glm::identity<glm::mat4>();
+                light.position = {3, 4, 5};
+                light.power = {1000, 1000, 1000};
+                scene->pointLights.push_back(light);
+            }
 
-            AmbientLight ambient;
-            ambient.radiance = glm::vec3(0.2, 0.2, 0.2);
-            ambient.distance = 0.1;
-            scene->ambientLights.push_back(ambient);
-
+            {
+                AmbientLight light;
+                light.radiance = {0.5, 0.5, 0.5};
+                light.distance = 0.2;
+                scene->ambientLights.push_back(light);
+            }
             continue;
         }
 
