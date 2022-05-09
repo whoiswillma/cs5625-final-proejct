@@ -7,10 +7,10 @@
 const double bound = 10.0;
 const float randomVelocity = 0.05;
 std::vector<Wall> Bird::walls {
-        Wall{ .point = {  bound, bound,  0 }, .normal = glm::normalize(glm::vec3{  -bound, 0,  0 }) },
-        Wall{ .point = { -bound, bound,  0 }, .normal = glm::normalize(glm::vec3{   bound, 0,  0 }) },
-        Wall{ .point = {  0,   bound,  bound }, .normal = glm::normalize(glm::vec3{ 0,   0, -bound }) },
-        Wall{ .point = {  0,   bound, -bound }, .normal = glm::normalize(glm::vec3{ 0,   0,  bound }) }
+        Wall{ glm::vec3 {  bound, bound,  0 }, glm::normalize(glm::vec3{  -bound, 0,  0 }) },
+        Wall{ glm::vec3 { -bound, bound,  0 }, glm::normalize(glm::vec3{   bound, 0,  0 }) },
+        Wall{ glm::vec3 {  0,   bound,  bound }, glm::normalize(glm::vec3{ 0,   0, -bound }) },
+        Wall{ glm::vec3 {  0,   bound, -bound }, glm::normalize(glm::vec3{ 0,   0,  bound }) }
 };
 
 Bird::Bird(std::shared_ptr<Node> birdNode) {
