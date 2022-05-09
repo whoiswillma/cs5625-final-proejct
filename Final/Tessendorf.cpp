@@ -4,10 +4,9 @@
 
 #include "Tessendorf.h"
 
-#ifdef __CYGWIN__
 #define _USE_MATH_DEFINES
 #include <cmath>
-#endif
+
 
 #define M_IMAG complex<float>(0.0f, 1.0f)
 

@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include "RTUtil/Camera.hpp"
+#include <functional>
 
 struct Material {
     glm::vec3 color;

@@ -1,5 +1,4 @@
 #include "Scene.h"
-
 #include <memory>
 
 glm::mat4 Node::getTransformTo(const std::shared_ptr<Node>& other) {
