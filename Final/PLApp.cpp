@@ -45,8 +45,21 @@ PLApp::PLApp(
     setUpNanoguiControls();
     setUpTextures();
 
+    if (config.birds) {
+        addBirds(this->scene->root);
+    }
+
     set_visible(true);
 }
+
+void PLApp::addBirds(std::shared_ptr<Node> curr_node) {
+    if (Bird::isBird(curr_node->name)) {
+        this->birds.push_back(Bird(curr_node));
+    }
+    for (std::shared_ptr<Node> child : curr_node->children) {
+        addBirds(child);
+    }
+};
 
 void PLApp::resetFramebuffers() {
     geomBuffer = std::make_shared<GLWrap::Framebuffer>(getViewportSize(), 3);
@@ -308,43 +321,43 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
                 return true;
             case GLFW_KEY_1:
                 shadingMode = ShadingMode_Flat;
-                std::cout << "Switched to flat shading" << std::endl;
+                //std::cout << "Switched to flat shading" << std::endl;
                 return true;
             case GLFW_KEY_2:
                 shadingMode = ShadingMode_Forward;
-                std::cout << "Switched to forward shading" << std::endl;
+                //std::cout << "Switched to forward shading" << std::endl;
                 return true;
             case GLFW_KEY_3:
                 shadingMode = ShadingMode_Deferred;
-                std::cout << "Switched to deferred shading" << std::endl;
+                //std::cout << "Switched to deferred shading" << std::endl;
                 return true;
             case GLFW_KEY_SPACE:
                 timer.setPlaying(!timer.playing());
-                std::cout << "[ ] Set playback: " << (timer.playing() ? "playing" : "paused") << std::endl;
+                //std::cout << "[ ] Set playback: " << (timer.playing() ? "playing" : "paused") << std::endl;
                 return true;
             case GLFW_KEY_COMMA:
                 timer.offset(-0.01);
-                std::cout << "[<] Skip backward: 0.01s" << std::endl;
+                //std::cout << "[<] Skip backward: 0.01s" << std::endl;
                 return true;
             case GLFW_KEY_LEFT:
                 timer.offset(-0.1);
-                std::cout << "[←] Skip backward: 0.1s" << std::endl;
+                //std::cout << "[←] Skip backward: 0.1s" << std::endl;
                 return true;
             case GLFW_KEY_PERIOD:
                 timer.offset(0.01);
-                std::cout << "[>] Skip forward: 0.01s" << std::endl;
+                //std::cout << "[>] Skip forward: 0.01s" << std::endl;
                 return true;
             case GLFW_KEY_RIGHT:
                 timer.offset(0.1);
-                std::cout << "[→] Skip forward: 0.1s" << std::endl;
+                //std::cout << "[→] Skip forward: 0.1s" << std::endl;
                 return true;
             case GLFW_KEY_UP:
                 timer.setRate(timer.rate() + 0.25);
-                std::cout << "[↑] Set rate: " << timer.rate() << "x" << std::endl;
+                //std::cout << "[↑] Set rate: " << timer.rate() << "x" << std::endl;
                 return true;
             case GLFW_KEY_DOWN:
                 timer.setRate(timer.rate() - 0.25);
-                std::cout << "[↓] Set rate: " << timer.rate() << "x" << std::endl;
+                //std::cout << "[↓] Set rate: " << timer.rate() << "x" << std::endl;
                 return true;
             default:
                 break;

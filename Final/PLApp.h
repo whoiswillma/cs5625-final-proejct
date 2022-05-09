@@ -15,6 +15,7 @@
 #include <GLWrap/Framebuffer.hpp>
 #include "Tessendorf.h"
 #include "Timer.h"
+#include "Bird.hpp"
 
 enum ShadingMode {
     ShadingMode_Flat,
@@ -46,6 +47,7 @@ struct PLAppConfig {
     TextureFilteringMode textureFilteringMode = TextureFilteringMode_Linear;
 
     bool ocean = false;
+    bool birds = false;
 };
 
 class PLApp : nanogui::Screen {
@@ -172,6 +174,9 @@ private:
     std::shared_ptr<GLWrap::Texture2D> oceanGradZTexture;
 
     void update_ocean_textures(double time);
+
+    void addBirds(std::shared_ptr<Node> curr_node);
+    std::vector<Bird> birds;
 };
 
 
