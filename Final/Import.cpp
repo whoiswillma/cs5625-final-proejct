@@ -52,9 +52,9 @@ Mesh importMesh(aiMesh* aiMesh) {
         }
     }
 
-    std::cout << "Imported mesh " << aiMesh->mName.C_Str() << std::endl;
-    std::cout << "\tnvertices = " << aiMesh->mNumVertices << std::endl;
-    std::cout << "\tnbones = " << aiMesh->mNumBones << std::endl;
+    //std::cout << "Imported mesh " << aiMesh->mName.C_Str() << std::endl;
+    //std::cout << "\tnvertices = " << aiMesh->mNumVertices << std::endl;
+    //std::cout << "\tnbones = " << aiMesh->mNumBones << std::endl;
 
     return m;
 }
@@ -85,7 +85,7 @@ std::shared_ptr<RTUtil::PerspectiveCamera> importCamera(const aiScene* aiScene) 
         float fovy = 2.0f * glm::atan(glm::tan(camera->mHorizontalFOV / 2.0f) / camera->mAspect);
         glm::mat4 nodeToWorld = nodeToWorldTransform(cameraNode);
 
-        std::cout << "Imported camera \"" << camera->mName.C_Str() << "\"" << std::endl;
+        //std::cout << "Imported camera \"" << camera->mName.C_Str() << "\"" << std::endl;
 
         return std::make_shared<RTUtil::PerspectiveCamera>(
                 MulUtil::mulh(nodeToWorld, RTUtil::a2g(camera->mPosition), 1),
@@ -97,7 +97,7 @@ std::shared_ptr<RTUtil::PerspectiveCamera> importCamera(const aiScene* aiScene) 
                 fovy
         );
     } else {
-        std::cout << "Using default camera" << std::endl;
+        //std::cout << "Using default camera" << std::endl;
 
         return std::make_shared<RTUtil::PerspectiveCamera>(
                 glm::vec3(3, 4, 5),
@@ -182,9 +182,9 @@ void importLights(
 
             ambientLights.push_back(light);
 
-            std::cout << "Imported ambient light \"" << name << "\"" << std::endl;
-            std::cout << "\trange = " << light.distance << std::endl;
-            std::cout << "\tradiance = " << light.radiance << std::endl;
+            //std::cout << "Imported ambient light \"" << name << "\"" << std::endl;
+            //std::cout << "\trange = " << light.distance << std::endl;
+            //std::cout << "\tradiance = " << light.radiance << std::endl;
 
         } else if (RTUtil::parseAreaLight(name, width, height)) {
             AreaLight light;
@@ -199,11 +199,11 @@ void importLights(
 
             areaLights.push_back(light);
 
-            std::cout << "Imported area light \"" << name << "\"" <<  std::endl;
-            std::cout << "\twidth = " << light.width << std::endl;
-            std::cout << "\theight = " << light.height << std::endl;
-            std::cout << "\tcenter(local) = " << light.center << std::endl;
-            std::cout << "\tpower = " << light.power << std::endl;
+            //std::cout << "Imported area light \"" << name << "\"" <<  std::endl;
+            //std::cout << "\twidth = " << light.width << std::endl;
+            //std::cout << "\theight = " << light.height << std::endl;
+            //std::cout << "\tcenter(local) = " << light.center << std::endl;
+            //std::cout << "\tpower = " << light.power << std::endl;
 
         } else {
             PointLight light;
@@ -216,13 +216,13 @@ void importLights(
 
             pointLights.push_back(light);
 
-            std::cout << "Imported point light \"" << name << "\"" << std::endl;
-            std::cout << "\tpower = " << light.power << std::endl;
-            std::cout << "\tposition(local) = " << light.position << std::endl;
+            //std::cout << "Imported point light \"" << name << "\"" << std::endl;
+            //std::cout << "\tpower = " << light.power << std::endl;
+            //std::cout << "\tposition(local) = " << light.position << std::endl;
         }
     }
 
-    std::cout << "Imported " << aiScene->mNumLights << " lights" << std::endl;
+    //std::cout << "Imported " << aiScene->mNumLights << " lights" << std::endl;
 }
 
 Channel importChannel(const aiNodeAnim* aiChannel) {
@@ -266,7 +266,7 @@ void importAnimations(const aiScene* aiScene, std::vector<Animation>& animations
         animations.push_back(importAnimation(aiScene->mAnimations[i]));
     }
 
-    std::cout << "Imported " << animations.size() << " animations" << std::endl;
+    //std::cout << "Imported " << animations.size() << " animations" << std::endl;
 }
 
 void updateNameToNode(const std::shared_ptr<Scene>& scene, const std::shared_ptr<Node>& node) {
@@ -278,9 +278,9 @@ void updateNameToNode(const std::shared_ptr<Scene>& scene, const std::shared_ptr
 
 void dumpNodeHierarchy(const std::shared_ptr<Node>& node, int indent) {
     for (int i = 0; i < indent; i++) {
-        std::cout << " ";
+        //std::cout << " ";
     }
-    std::cout << node->name << " " << node->transform << std::endl;
+    //std::cout << node->name << " " << node->transform << std::endl;
 
     for (const auto& child : node->children) {
         dumpNodeHierarchy(child, indent + 1);

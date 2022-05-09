@@ -52,6 +52,11 @@ int main(int argc, char **argv) {
             continue;
         }
 
+        if (strcmp("--birds", argv[i]) == 0) {
+            config.birds = true;
+            continue;
+        }
+
         if (strcmp("--no-point", argv[i]) == 0) {
             config.pointLightsEnabled = false;
             continue;
