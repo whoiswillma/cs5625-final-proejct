@@ -16,13 +16,14 @@ struct OceanMesh {
     std::vector<glm::vec2> texCoords;
     std::vector<uint32_t> indices;
 
-    explicit OceanMesh(int n = 128, int m = 128);
+    explicit OceanMesh(int n, int m);
 };
 
 struct OceanScene {
     glm::mat4 transform;
     OceanMesh mesh;
 
+    const tessendorf::config config;
     const tessendorf::array2d<std::complex<float>> tessendorfIv;
 
     const glm::ivec2 gridSize;

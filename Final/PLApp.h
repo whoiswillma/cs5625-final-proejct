@@ -15,6 +15,7 @@
 #include <GLWrap/Framebuffer.hpp>
 #include "Tessendorf.h"
 #include "Timer.h"
+#include "Bird.hpp"
 
 enum ShadingMode {
     ShadingMode_Flat,
@@ -36,16 +37,17 @@ struct PLAppConfig {
     float exposure = 1;
     float thetaSun = glm::pi<float>() / 3;
     float turbidity = 4;
-    int ssaoNumSamples = 50;
+    int ssaoNumSamples = 15;
     bool pcfEnabled = true;
     bool pointLightsEnabled = true;
     bool convertAreaToPoint = true;
     bool ambientLightsEnabled = true;
-    bool sunskyEnabled = true;
+    bool sunskyEnabled = false;
     bool bloomFilterEnabled = true;
     TextureFilteringMode textureFilteringMode = TextureFilteringMode_Linear;
 
     bool ocean = false;
+    bool birds = false;
 };
 
 class PLApp : nanogui::Screen {
@@ -86,6 +88,9 @@ private:
     std::shared_ptr<GLWrap::Program> programDeferredBlur;
     std::shared_ptr<GLWrap::Program> programDeferredMerge;
     std::shared_ptr<GLWrap::Program> programSrgb;
+    std::shared_ptr<GLWrap::Program> programOceanForward;
+    std::shared_ptr<GLWrap::Program> programOceanDeferredGeom;
+    std::shared_ptr<GLWrap::Program> programOceanDeferredShadow;
 
     std::vector<std::shared_ptr<GLWrap::Mesh>> meshes;
     std::shared_ptr<GLWrap::Mesh> fsqMesh;
@@ -105,6 +110,8 @@ private:
     nanogui::Color backgroundColor;
     PLAppConfig config;
 
+    Timer timer;
+
     const std::vector<std::pair<float, int>> blurLevels = {
             {6.2, 2},
             {24.9, 4},
@@ -120,9 +127,11 @@ private:
     glm::ivec2 getViewportSize();
 
     void deferred_geometry_pass();
+    void deferred_ocean_geometry_pass();
     void draw_contents_deferred();
     void deferred_draw_pass(const std::shared_ptr<GLWrap::Framebuffer>& accBuffer);
     void deferred_shadow_pass(const PointLight &light);
+    void deferred_ocean_shadow_pass(const PointLight &light);
     void deferred_lighting_pass(
             const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer,
             const GLWrap::Texture2D &shadowTexture,
@@ -141,21 +150,34 @@ private:
     );
     void deferred_merge_pass(const GLWrap::Texture2D &image, const GLWrap::Texture2D &blurred);
 
-    std::shared_ptr<GLWrap::Program> programOceanForward;
-    std::shared_ptr<GLWrap::Program> programOceanDeferredGeom;
-    std::shared_ptr<GLWrap::Program> programOceanDeferredShadow;
     std::shared_ptr<GLWrap::Mesh> oceanMesh;
-    tessendorf::array2d<float> oceanDisplacementMap;
-    float oceanA, oceanB;
+
+    // Pre-allocated buffers needed to run the ocean simulation
+    struct OceanBuffers {
+        tessendorf::array2d<std::complex<float>> buffer;
+        tessendorf::array2d<std::complex<float>> fourierAmplitudes;
+        tessendorf::array2d<std::complex<float>> gradientXAmplitudes;
+        tessendorf::array2d<std::complex<float>> gradientZAmplitudes;
+
+        tessendorf::array2d<float> displacementMap;
+        float displacementA, displacementB;
+
+        tessendorf::array2d<float> gradXMap;
+        float gradXA, gradXB;
+
+        tessendorf::array2d<float> gradZMap;
+        float gradZA, gradZB;
+    } oceanBuffers;
+
     std::shared_ptr<GLWrap::Texture2D> oceanDisplacementTexture;
+    std::shared_ptr<GLWrap::Texture2D> oceanGradXTexture;
+    std::shared_ptr<GLWrap::Texture2D> oceanGradZTexture;
 
-    void deferred_ocean_geometry_pass();
+    void update_ocean_textures(double time);
 
-    Timer timer;
-
-    void update_ocean_displacement_texture(double time);
-
-    void deferred_ocean_shadow_pass(const PointLight &light);
+    void add_birds(std::shared_ptr<Node> curr_node);
+    void animate_birds();
+    std::vector<Bird> birds;
 };
 
 

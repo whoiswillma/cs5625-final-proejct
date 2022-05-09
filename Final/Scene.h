@@ -4,7 +4,9 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <map>
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include "RTUtil/Camera.hpp"
 
 struct Material {
@@ -35,6 +37,7 @@ struct PointLight {
 };
 
 struct Node {
+    std::string name;
     glm::mat4 transform;
     std::vector<unsigned int> meshIndices;
     std::vector<std::shared_ptr<Node>> children;
@@ -48,6 +51,23 @@ struct Mesh {
     std::vector<glm::vec3> normals;
     std::vector<uint32_t> indices;
     uint32_t materialIndex;
+
+    std::vector<std::pair<std::string, glm::mat4>> bones;
+    std::vector<glm::vec4> boneWeights;
+    std::vector<glm::ivec4> boneIndices;
+};
+
+struct Channel {
+    std::string nodeName;
+    std::map<double, glm::vec3> translation;
+    std::map<double, glm::quat> rotation;
+    std::map<double, glm::vec3> scale;
+};
+
+struct Animation {
+    double ticksPerSecond;
+    std::vector<Channel> channels;
+    double duration;
 };
 
 struct Scene {
@@ -58,6 +78,10 @@ struct Scene {
     std::vector<AreaLight> areaLights;
     std::vector<AmbientLight> ambientLights;
     std::shared_ptr<Node> root;
+    std::vector<Animation> animations;
+
+    std::map<std::string, std::shared_ptr<Node>> nameToNode;
+    void animate(double time, unsigned int animationIdx = 0);
 };
 
 #endif //CS5625_SCENE_H

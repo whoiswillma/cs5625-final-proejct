@@ -28,7 +28,15 @@ PLApp::PLApp(
     oceanScene(oceanScene),
     shadingMode(ShadingMode_Deferred),
     config(config),
-    oceanDisplacementMap(oceanScene->gridSize.x, oceanScene->gridSize.y) {
+    oceanBuffers({
+         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
+         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
+         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
+         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
+         tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
+         tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
+         tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
+    }) {
 
     resetFramebuffers();
     setUpPrograms();
@@ -37,8 +45,21 @@ PLApp::PLApp(
     setUpNanoguiControls();
     setUpTextures();
 
+    if (config.birds) {
+        add_birds(this->scene->root);
+    }
+
     set_visible(true);
 }
+
+void PLApp::add_birds(std::shared_ptr<Node> curr_node) {
+    if (Bird::is_bird(curr_node->name)) {
+        this->birds.push_back(Bird(curr_node));
+    }
+    for (std::shared_ptr<Node> child : curr_node->children) {
+        add_birds(child);
+    }
+};
 
 void PLApp::resetFramebuffers() {
     geomBuffer = std::make_shared<GLWrap::Framebuffer>(getViewportSize(), 3);
@@ -83,7 +104,7 @@ void PLApp::setUpPrograms() {
     }));
 
     programForward = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("forward", {
-            {GL_VERTEX_SHADER,   resourcePath + "shaders/forward.vs"},
+            {GL_VERTEX_SHADER,   resourcePath + "shaders/deferred.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/microfacet.fs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/forward.fs"}
     }));
@@ -127,7 +148,7 @@ void PLApp::setUpPrograms() {
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_merge.fs"},
     }));
 
-    programOceanForward = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("forward", {
+    programOceanForward = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("ocean forward", {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/ocean.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/microfacet.fs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/forward.fs"}
@@ -160,6 +181,8 @@ void PLApp::setUpMeshes() {
 
         glWrapMesh->setAttribute(0, mesh.vertices);
         glWrapMesh->setAttribute(1, mesh.normals);
+        glWrapMesh->setAttribute(2, mesh.boneIndices);
+        glWrapMesh->setAttribute(3, mesh.boneWeights);
         glWrapMesh->setIndices(mesh.indices, GL_TRIANGLES);
 
         meshes.push_back(std::move(glWrapMesh));
@@ -276,6 +299,14 @@ void PLApp::setUpTextures() {
     oceanDisplacementTexture = std::make_shared<GLWrap::Texture2D>(
             oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
     );
+
+    oceanGradXTexture = std::make_shared<GLWrap::Texture2D>(
+            oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
+    );
+
+    oceanGradZTexture = std::make_shared<GLWrap::Texture2D>(
+            oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
+    );
 }
 
 bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
@@ -290,43 +321,43 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
                 return true;
             case GLFW_KEY_1:
                 shadingMode = ShadingMode_Flat;
-                std::cout << "Switched to flat shading" << std::endl;
+                //std::cout << "Switched to flat shading" << std::endl;
                 return true;
             case GLFW_KEY_2:
                 shadingMode = ShadingMode_Forward;
-                std::cout << "Switched to forward shading" << std::endl;
+                //std::cout << "Switched to forward shading" << std::endl;
                 return true;
             case GLFW_KEY_3:
                 shadingMode = ShadingMode_Deferred;
-                std::cout << "Switched to deferred shading" << std::endl;
+                //std::cout << "Switched to deferred shading" << std::endl;
                 return true;
             case GLFW_KEY_SPACE:
                 timer.setPlaying(!timer.playing());
-                std::cout << "[ ] Set playback: " << (timer.playing() ? "playing" : "paused") << std::endl;
+                //std::cout << "[ ] Set playback: " << (timer.playing() ? "playing" : "paused") << std::endl;
                 return true;
             case GLFW_KEY_COMMA:
                 timer.offset(-0.01);
-                std::cout << "[<] Skip backward: 0.01s" << std::endl;
+                //std::cout << "[<] Skip backward: 0.01s" << std::endl;
                 return true;
             case GLFW_KEY_LEFT:
                 timer.offset(-0.1);
-                std::cout << "[←] Skip backward: 0.1s" << std::endl;
+                //std::cout << "[←] Skip backward: 0.1s" << std::endl;
                 return true;
             case GLFW_KEY_PERIOD:
                 timer.offset(0.01);
-                std::cout << "[>] Skip forward: 0.01s" << std::endl;
+                //std::cout << "[>] Skip forward: 0.01s" << std::endl;
                 return true;
             case GLFW_KEY_RIGHT:
                 timer.offset(0.1);
-                std::cout << "[→] Skip forward: 0.1s" << std::endl;
+                //std::cout << "[→] Skip forward: 0.1s" << std::endl;
                 return true;
             case GLFW_KEY_UP:
                 timer.setRate(timer.rate() + 0.25);
-                std::cout << "[↑] Set rate: " << timer.rate() << "x" << std::endl;
+                //std::cout << "[↑] Set rate: " << timer.rate() << "x" << std::endl;
                 return true;
             case GLFW_KEY_DOWN:
                 timer.setRate(timer.rate() - 0.25);
-                std::cout << "[↓] Set rate: " << timer.rate() << "x" << std::endl;
+                //std::cout << "[↓] Set rate: " << timer.rate() << "x" << std::endl;
                 return true;
             default:
                 break;
@@ -442,6 +473,21 @@ void PLApp::draw_contents_forward() {
                 prog->uniform("alpha", material.roughnessFactor);
                 prog->uniform("eta", 1.5f);
                 prog->uniform("diffuseReflectance", material.color);
+
+                prog->uniform("useBones", !mesh.bones.empty());
+                if (!mesh.bones.empty()) {
+                    for (int j = 0; j < mesh.bones.size(); j++) {
+                        auto bone = mesh.bones[j];
+                        std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+                        glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
+
+                        prog->uniform(
+                                "boneTransforms[" + std::to_string(j) + "]",
+                                boneTransform
+                        );
+                    }
+                }
+
                 meshes[i]->drawElements();
             }
         }
@@ -468,31 +514,22 @@ void PLApp::draw_contents_forward() {
         prog->uniform("eta", 1.5f);
         prog->uniform("diffuseReflectance", glm::vec3(0.2, 0.3, 0.5));
 
-        tessendorf::height_map(oceanDisplacementMap, oceanScene->tessendorfIv, timer.time());
-
-        float min = oceanDisplacementMap.min();
-        float max = oceanDisplacementMap.max();
-        oceanDisplacementMap.plus(-min);
-        oceanDisplacementMap.times(1 / (max - min));
-
-        prog->uniform("a", max - min);
-        prog->uniform("b", min);
-
-        glBindTexture(GL_TEXTURE_2D, oceanDisplacementTexture->id());
-        glTexImage2D(
-                GL_TEXTURE_2D,
-                0,
-                GL_DEPTH_COMPONENT32F,
-                oceanScene->gridSize.x,
-                oceanScene->gridSize.y,
-                0,
-                GL_DEPTH_COMPONENT,
-                GL_FLOAT,
-                oceanDisplacementMap.data.get()
-        );
+        update_ocean_textures(timer.time());
 
         oceanDisplacementTexture->bindToTextureUnit(0);
         prog->uniform("displacementMap", 0);
+        prog->uniform("displacementA", oceanBuffers.displacementA);
+        prog->uniform("displacementB", oceanBuffers.displacementB);
+
+        oceanGradXTexture->bindToTextureUnit(1);
+        prog->uniform("gradXMap", 1);
+        prog->uniform("gradXA", oceanBuffers.gradXA);
+        prog->uniform("gradXB", oceanBuffers.gradXB);
+
+        oceanGradZTexture->bindToTextureUnit(2);
+        prog->uniform("gradZMap", 2);
+        prog->uniform("gradZA", oceanBuffers.gradZA);
+        prog->uniform("gradZB", oceanBuffers.gradZB);
 
         oceanMesh->drawElements();
 
@@ -529,6 +566,21 @@ void PLApp::deferred_geometry_pass() {
             prog->uniform("alpha", material.roughnessFactor);
             prog->uniform("eta", 1.5f);
             prog->uniform("diffuseReflectance", material.color);
+
+            prog->uniform("useBones", !mesh.bones.empty());
+            if (!mesh.bones.empty()) {
+                for (int j = 0; j < mesh.bones.size(); j++) {
+                    auto bone = mesh.bones[j];
+                    std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+                    glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
+
+                    prog->uniform(
+                            "boneTransforms[" + std::to_string(j) + "]",
+                            boneTransform
+                    );
+                }
+            }
+
             meshes[i]->drawElements();
         }
     }
@@ -536,29 +588,46 @@ void PLApp::deferred_geometry_pass() {
     prog->unuse();
 }
 
-void PLApp::update_ocean_displacement_texture(double time) {
-    tessendorf::height_map(oceanDisplacementMap, oceanScene->tessendorfIv, (float) time);
+void texture_normalize_and_store(
+        const std::shared_ptr<GLWrap::Texture2D>& texture,
+        float &scale,
+        float &offset,
+        tessendorf::array2d<float> buffer
+) {
+    float min = buffer.min();
+    float max = buffer.max();
+    buffer.plus(-min);
+    buffer.times(1 / (max - min));
 
-    float min = oceanDisplacementMap.min();
-    float max = oceanDisplacementMap.max();
-    oceanDisplacementMap.plus(-min);
-    oceanDisplacementMap.times(1 / (max - min));
+    scale = max - min;
+    offset = min;
 
-    oceanA = max - min;
-    oceanB = min;
-
-    glBindTexture(GL_TEXTURE_2D, oceanDisplacementTexture->id());
+    glBindTexture(GL_TEXTURE_2D, texture->id());
     glTexImage2D(
             GL_TEXTURE_2D,
             0,
             GL_DEPTH_COMPONENT32F,
-            oceanScene->gridSize.x,
-            oceanScene->gridSize.y,
+            buffer.size_x,
+            buffer.size_y,
             0,
             GL_DEPTH_COMPONENT,
             GL_FLOAT,
-            oceanDisplacementMap.data.get()
+            buffer.data.get()
     );
+}
+
+void PLApp::update_ocean_textures(double time) {
+    tessendorf::fourier_amplitudes(oceanBuffers.fourierAmplitudes, oceanScene->tessendorfIv, (float) time, oceanScene->config);
+    tessendorf::ifft(oceanBuffers.displacementMap, oceanBuffers.fourierAmplitudes, oceanBuffers.buffer, true);
+    texture_normalize_and_store(oceanDisplacementTexture, oceanBuffers.displacementA, oceanBuffers.displacementB, oceanBuffers.displacementMap);
+
+    tessendorf::gradient_amplitudes(oceanBuffers.gradientXAmplitudes, oceanBuffers.gradientZAmplitudes, oceanBuffers.fourierAmplitudes, oceanScene->config);
+
+    tessendorf::ifft(oceanBuffers.gradXMap, oceanBuffers.gradientXAmplitudes, oceanBuffers.buffer, false);
+    texture_normalize_and_store(oceanGradXTexture, oceanBuffers.gradXA, oceanBuffers.gradXB, oceanBuffers.gradXMap);
+
+    tessendorf::ifft(oceanBuffers.gradZMap, oceanBuffers.gradientZAmplitudes, oceanBuffers.buffer, false);
+    texture_normalize_and_store(oceanGradZTexture, oceanBuffers.gradZA, oceanBuffers.gradZB, oceanBuffers.gradZMap);
 }
 
 void PLApp::deferred_ocean_geometry_pass() {
@@ -575,9 +644,18 @@ void PLApp::deferred_ocean_geometry_pass() {
 
     oceanDisplacementTexture->bindToTextureUnit(0);
     prog->uniform("displacementMap", 0);
+    prog->uniform("displacementA", oceanBuffers.displacementA);
+    prog->uniform("displacementB", oceanBuffers.displacementB);
 
-    prog->uniform("a", oceanA);
-    prog->uniform("b", oceanB);
+    oceanGradXTexture->bindToTextureUnit(1);
+    prog->uniform("gradXMap", 1);
+    prog->uniform("gradXA", oceanBuffers.gradXA);
+    prog->uniform("gradXB", oceanBuffers.gradXB);
+
+    oceanGradZTexture->bindToTextureUnit(2);
+    prog->uniform("gradZMap", 2);
+    prog->uniform("gradZA", oceanBuffers.gradZA);
+    prog->uniform("gradZB", oceanBuffers.gradZB);
 
     oceanMesh->drawElements();
 
@@ -618,6 +696,21 @@ void PLApp::deferred_shadow_pass(
         prog->uniform("mM", node->getTransformTo(nullptr));
 
         for (unsigned int i: node->meshIndices) {
+            Mesh mesh = scene->meshes[i];
+
+            prog->uniform("useBones", !mesh.bones.empty());
+            if (!mesh.bones.empty()) {
+                for (int j = 0; j < mesh.bones.size(); j++) {
+                    auto bone = mesh.bones[j];
+                    std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+                    glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
+
+                    prog->uniform(
+                            "boneTransforms[" + std::to_string(j) + "]",
+                            boneTransform
+                    );
+                }
+            }
             meshes[i]->drawElements();
         }
     }
@@ -638,9 +731,18 @@ void PLApp::deferred_ocean_shadow_pass(
 
     oceanDisplacementTexture->bindToTextureUnit(0);
     prog->uniform("displacementMap", 0);
+    prog->uniform("displacementA", oceanBuffers.displacementA);
+    prog->uniform("displacementB", oceanBuffers.displacementB);
 
-    prog->uniform("a", oceanA);
-    prog->uniform("b", oceanB);
+    oceanGradXTexture->bindToTextureUnit(1);
+    prog->uniform("gradXMap", 1);
+    prog->uniform("gradXA", oceanBuffers.gradXA);
+    prog->uniform("gradXB", oceanBuffers.gradXB);
+
+    oceanGradZTexture->bindToTextureUnit(2);
+    prog->uniform("gradZMap", 2);
+    prog->uniform("gradZA", oceanBuffers.gradZA);
+    prog->uniform("gradZB", oceanBuffers.gradZB);
 
     prog->unuse();
 }
@@ -796,7 +898,7 @@ void PLApp::deferred_merge_pass(
 
 void PLApp::draw_contents_deferred() {
     if (config.ocean) {
-        update_ocean_displacement_texture(timer.time());
+        update_ocean_textures(timer.time());
     }
 
     geomBuffer->bind();
@@ -922,8 +1024,72 @@ void PLApp::draw_contents_deferred() {
     deferred_draw_pass(accBuffer);
 }
 
+void PLApp::animate_birds() {
+    /* returns the vector we need to add to the position of the current boid to move it
+     * 1% of the way to the center of mass of its neighbors
+     */
+    const auto center_of_mass = [&](const size_t currBoid) -> glm::vec3 {
+        glm::vec3 avgPosition(0);
+        for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
+            if (currBoid != currNeighbor) avgPosition += this->birds[currNeighbor].position;
+        }
+        avgPosition /= (this->birds.size() - 1);
+        return (avgPosition - this->birds[currBoid].position) / 1000.f;
+    };
+
+    /* returns the vector we need to add to the position of the current boid to prevent collision with
+     * other boids
+     */
+    const auto course_correction = [&](const size_t currBoid) -> glm::vec3 {
+        glm::vec3 correctionAmt(0);
+        for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
+            if (currBoid != currNeighbor) {
+                if (glm::distance(this->birds[currBoid].position, this->birds[currNeighbor].position) <= 0.25) {
+                    correctionAmt -= (this->birds[currNeighbor].position - this->birds[currBoid].position);
+                }
+            }
+        }
+
+        // if a bird is going to go out of bounds, make it turn hard
+        if (glm::dot(Bird::walls[0].normal, this->birds[currBoid].position - Bird::walls[0].point) <= 0.25)
+            correctionAmt.x -= 0.002;
+        if (glm::dot(Bird::walls[1].normal, this->birds[currBoid].position - Bird::walls[1].point) <= 0.25)
+            correctionAmt.x += 0.002;
+        if (glm::dot(Bird::walls[2].normal, this->birds[currBoid].position - Bird::walls[2].point) <= 0.25)
+            correctionAmt.z -= 0.002;
+        if (glm::dot(Bird::walls[3].normal, this->birds[currBoid].position - Bird::walls[3].point) <= 0.25)
+            correctionAmt.z += 0.002;
+
+        return correctionAmt;
+    };
+
+    /* returns the vector that we need to add to the velocity of the current boid to get the new velocity */
+    const auto center_of_velocity = [&](const size_t currBoid) -> glm::vec3 {
+        glm::vec3 avgVelocity(0);
+        for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
+            if (currBoid != currNeighbor) avgVelocity += this->birds[currNeighbor].velocity;
+        }
+        avgVelocity /= (this->birds.size() - 1);
+        return (avgVelocity - this->birds[currBoid].velocity) / 500.f;
+    };
+
+    for (size_t currBoid = 0; currBoid < this->birds.size(); currBoid++) {
+        this->birds[currBoid].velocity +=
+                center_of_mass(currBoid) +
+                course_correction(currBoid)  +
+                center_of_velocity(currBoid);
+        this->birds[currBoid].position += this->birds[currBoid].velocity;
+        this->birds[currBoid].update_self();
+    }
+}
+
 void PLApp::draw_contents() {
     GLWrap::checkGLError("drawContents start");
+
+    scene->animate(timer.time());
+    if (config.birds) {
+        animate_birds();
+    }
 
     switch (shadingMode) {
         case ShadingMode_Flat:
