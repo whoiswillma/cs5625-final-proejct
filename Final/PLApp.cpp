@@ -46,18 +46,18 @@ PLApp::PLApp(
     setUpTextures();
 
     if (config.birds) {
-        addBirds(this->scene->root);
+        add_birds(this->scene->root);
     }
 
     set_visible(true);
 }
 
-void PLApp::addBirds(std::shared_ptr<Node> curr_node) {
-    if (Bird::isBird(curr_node->name)) {
+void PLApp::add_birds(std::shared_ptr<Node> curr_node) {
+    if (Bird::is_bird(curr_node->name)) {
         this->birds.push_back(Bird(curr_node));
     }
     for (std::shared_ptr<Node> child : curr_node->children) {
-        addBirds(child);
+        add_birds(child);
     }
 };
 
@@ -1024,10 +1024,72 @@ void PLApp::draw_contents_deferred() {
     deferred_draw_pass(accBuffer);
 }
 
+void PLApp::animate_birds() {
+    /* returns the vector we need to add to the position of the current boid to move it
+     * 1% of the way to the center of mass of its neighbors
+     */
+    const auto center_of_mass = [&](const size_t currBoid) -> glm::vec3 {
+        glm::vec3 avgPosition(0);
+        for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
+            if (currBoid != currNeighbor) avgPosition += this->birds[currNeighbor].position;
+        }
+        avgPosition /= (this->birds.size() - 1);
+        return (avgPosition - this->birds[currBoid].position) / 1000.f;
+    };
+
+    /* returns the vector we need to add to the position of the current boid to prevent collision with
+     * other boids
+     */
+    const auto course_correction = [&](const size_t currBoid) -> glm::vec3 {
+        glm::vec3 correctionAmt(0);
+        for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
+            if (currBoid != currNeighbor) {
+                if (glm::distance(this->birds[currBoid].position, this->birds[currNeighbor].position) <= 0.25) {
+                    correctionAmt -= (this->birds[currNeighbor].position - this->birds[currBoid].position);
+                }
+            }
+        }
+
+        // if a bird is going to go out of bounds, make it turn hard
+        if (glm::dot(Bird::walls[0].normal, this->birds[currBoid].position - Bird::walls[0].point) <= 0.25)
+            correctionAmt.x -= 0.002;
+        if (glm::dot(Bird::walls[1].normal, this->birds[currBoid].position - Bird::walls[1].point) <= 0.25)
+            correctionAmt.x += 0.002;
+        if (glm::dot(Bird::walls[2].normal, this->birds[currBoid].position - Bird::walls[2].point) <= 0.25)
+            correctionAmt.z -= 0.002;
+        if (glm::dot(Bird::walls[3].normal, this->birds[currBoid].position - Bird::walls[3].point) <= 0.25)
+            correctionAmt.z += 0.002;
+
+        return correctionAmt;
+    };
+
+    /* returns the vector that we need to add to the velocity of the current boid to get the new velocity */
+    const auto center_of_velocity = [&](const size_t currBoid) -> glm::vec3 {
+        glm::vec3 avgVelocity(0);
+        for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
+            if (currBoid != currNeighbor) avgVelocity += this->birds[currNeighbor].velocity;
+        }
+        avgVelocity /= (this->birds.size() - 1);
+        return (avgVelocity - this->birds[currBoid].velocity) / 500.f;
+    };
+
+    for (size_t currBoid = 0; currBoid < this->birds.size(); currBoid++) {
+        this->birds[currBoid].velocity +=
+                center_of_mass(currBoid) +
+                course_correction(currBoid)  +
+                center_of_velocity(currBoid);
+        this->birds[currBoid].position += this->birds[currBoid].velocity;
+        this->birds[currBoid].update_self();
+    }
+}
+
 void PLApp::draw_contents() {
     GLWrap::checkGLError("drawContents start");
 
     scene->animate(timer.time());
+    if (config.birds) {
+        animate_birds();
+    }
 
     switch (shadingMode) {
         case ShadingMode_Flat:
