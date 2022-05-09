@@ -2,10 +2,8 @@
 // Created by William Ma on 5/5/22.
 //
 
-#ifdef __CYGWIN__
 #define _USE_MATH_DEFINES
 #include <cmath>
-#endif
 
 #include <vector>
 #include <random>

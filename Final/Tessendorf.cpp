@@ -1,14 +1,11 @@
 //
 // Created by William Ma on 5/5/22.
 //
-
-#include "Tessendorf.h"
-
-#ifdef __CYGWIN__
 #define _USE_MATH_DEFINES
 #include <cmath>
-#endif
 
+
+#include "Tessendorf.h"
 #define PERIOD_T 10.0f
 #define PATCH_SIZE glm::vec2(64, 64)
 #define GRAVITY 9.81f
