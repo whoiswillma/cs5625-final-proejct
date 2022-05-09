@@ -42,7 +42,7 @@ OceanScene::OceanScene(glm::vec2 sizeMeters, glm::ivec2 gridSize) :
         mesh(gridSize.x, gridSize.y),
         sizeMeters(sizeMeters),
         gridSize(gridSize),
-        tessendorfIv(tessendorf::sample_initialization_vector(gridSize, {})),
+        tessendorfIv(tessendorf::sample_initialization_vector(gridSize, std::default_random_engine())),
         config({
             10.0f,
             sizeMeters,
