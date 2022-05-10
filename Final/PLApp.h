@@ -66,7 +66,7 @@ public:
     virtual bool resize_event(const nanogui::Vector2i &size) override;
 
     virtual void draw_contents() override;
-
+	virtual void load_texture(const char*);
 private:
     void setUpNanoguiControls();
     void setUpMeshes();
@@ -97,8 +97,11 @@ private:
 
     std::shared_ptr<RTUtil::PerspectiveCamera> cam;
     std::unique_ptr<RTUtil::DefaultCC> cc;
-
-    // size = viewport, color attachments = 3, depth attachment = yes
+	
+	int texture_width,texture_height, texture_Channels;;
+	unsigned char *textureData;
+    
+	// size = viewport, color attachments = 3, depth attachment = yes
     std::shared_ptr<GLWrap::Framebuffer> geomBuffer;
 
     // size = viewport, color attachments = 1, depth attachment = no, with mipmaps

@@ -1,4 +1,4 @@
-#include "Import.h"
+﻿#include "Import.h"
 
 #include <cassert>
 #include <iostream>
@@ -268,7 +268,25 @@ void importAnimations(const aiScene* aiScene, std::vector<Animation>& animations
 
     //std::cout << "Imported " << animations.size() << " animations" << std::endl;
 }
+Texture importTexture(const aiTexture* aiTexture) {
+	Texture texture;
+	texture.mHeight = aiTexture->mHeight;
+	texture.mWidth = aiTexture->mWidth;
+	for (int i = 0; i < texture.mWidth; i++) {
+		aiTexel tmp = aiTexture->pcData[i];
+		glm::vec4 data = glm::vec4(tmp.b,tmp.g,tmp.r,tmp.a);
+		texture.texturedata.push_back(data);
+	}
+	return texture;
+}
 
+
+void importTextures(const aiScene* aiScene, std::vector<Texture>& textures) {
+
+	for (int i = 0; i < aiScene->mNumTextures; i++) {
+		textures.push_back(importTexture(aiScene->mTextures[i]));
+	}
+}
 void updateNameToNode(const std::shared_ptr<Scene>& scene, const std::shared_ptr<Node>& node) {
     scene->nameToNode[node->name] = node;
     for (const auto& child : node->children) {
@@ -287,6 +305,7 @@ void dumpNodeHierarchy(const std::shared_ptr<Node>& node, int indent) {
     }
 }
 
+
 std::shared_ptr<Scene> importScene(const aiScene* aiScene) {
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
     scene->meshes = importMeshes(aiScene);
@@ -295,6 +314,8 @@ std::shared_ptr<Scene> importScene(const aiScene* aiScene) {
     scene->root = importRoot(aiScene);
     importLights(aiScene, scene->pointLights, scene->areaLights, scene->ambientLights);
     importAnimations(aiScene, scene->animations);
+	importTextures(aiScene,scene->textures);
+
     updateNameToNode(scene, scene->root);
     dumpNodeHierarchy(scene->root, 0);
     return scene;

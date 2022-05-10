@@ -13,6 +13,8 @@
 #include "GLWrap/Framebuffer.hpp"
 #include "MulUtil.hpp"
 #include "Tessendorf.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 PLApp::PLApp(
         const std::shared_ptr<Scene> &scene,
@@ -44,7 +46,7 @@ PLApp::PLApp(
     setUpMeshes();
     setUpNanoguiControls();
     setUpTextures();
-
+	load_texture("../resources/scenes/bsptD.jpg");
     if (config.birds) {
         add_birds(this->scene->root);
     }
@@ -52,6 +54,29 @@ PLApp::PLApp(
     set_visible(true);
 }
 
+void PLApp::load_texture(const char* filename) {
+
+	unsigned int texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	// set the texture wrapping/filtering options (on the currently bound texture object)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// load and generate the texture
+	this->textureData = stbi_load(filename, &texture_width, &texture_height, &texture_Channels, 0);
+	if (textureData)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture_width, texture_height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(textureData);
+}
 void PLApp::add_birds(std::shared_ptr<Node> curr_node) {
     if (Bird::is_bird(curr_node->name)) {
         this->birds.push_back(Bird(curr_node));

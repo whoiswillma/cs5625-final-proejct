@@ -71,6 +71,13 @@ struct Animation {
     double duration;
 };
 
+struct Texture {
+	std::string target;
+	unsigned int mWidth;
+	unsigned int mHeight;
+	std::vector<glm::vec4> texturedata;
+};
+
 struct Scene {
     std::vector<Mesh> meshes;
     std::shared_ptr<RTUtil::PerspectiveCamera> camera;
@@ -80,6 +87,7 @@ struct Scene {
     std::vector<AmbientLight> ambientLights;
     std::shared_ptr<Node> root;
     std::vector<Animation> animations;
+	std::vector<Texture> textures;
 
     std::map<std::string, std::shared_ptr<Node>> nameToNode;
     void animate(double time, unsigned int animationIdx = 0);
