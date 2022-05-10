@@ -101,6 +101,12 @@ void PLApp::setUpPrograms() {
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_geom.fs"}
     }));
 
+    programToonPoint = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred toon light pass", {
+            {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shader_inputs.fs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/toon_point.fs"}
+    }));
+
     programDeferredShadow = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred shadow pass", {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/deferred.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shadow.fs"}
@@ -741,6 +747,48 @@ glm::ivec2 PLApp::getViewportSize() {
     };
 }
 
+void PLApp::toon_lighting_pass(
+    const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
+    const GLWrap::Texture2D& shadowTexture,
+    const PointLight& light
+) {
+    geomBuffer->colorTexture(0).bindToTextureUnit(0);
+    geomBuffer->colorTexture(1).bindToTextureUnit(1);
+    geomBuffer->colorTexture(2).bindToTextureUnit(2);
+    geomBuffer->depthTexture().bindToTextureUnit(3);
+    shadowTexture.bindToTextureUnit(4);
+
+    std::shared_ptr<GLWrap::Program> prog = programToonPoint;
+    prog->use();
+    prog->uniform("viewportSize", getViewportSize());
+    prog->uniform("mV", cam->getViewMatrix());
+    prog->uniform("mP", cam->getProjectionMatrix());
+    prog->uniform("shadowBias", config.shadowBias);
+    prog->uniform("diffuseReflectanceTex", 0);
+    prog->uniform("materialTex", 1);
+    prog->uniform("normalsTex", 2);
+    prog->uniform("depthTex", 3);
+    prog->uniform("shadowTex", 4);
+
+    RTUtil::PerspectiveCamera lightCamera = get_light_camera(light);
+    prog->uniform("mV_light", lightCamera.getViewMatrix());
+    prog->uniform("mP_light", lightCamera.getProjectionMatrix());
+    prog->uniform("vLightPos", MulUtil::mulh(
+            cam->getViewMatrix() * light.nodeToWorld,
+            light.position,
+            1
+    ));
+    prog->uniform("vCamPos", cam->getEye());
+    prog->uniform("specularThreshold", 0.6f);
+    prog->uniform("specularIntensity", 3.0f);
+    prog->uniform("specularSmoothness", 0.0f);
+    prog->uniform("edgeThreshold", 0.5f);
+    prog->uniform("edgeIntensity", 3.0f);
+
+    fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
+    prog->unuse();
+}
+
 void PLApp::deferred_lighting_pass(
         const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer,
         const GLWrap::Texture2D &shadowTexture,
@@ -910,23 +958,23 @@ void PLApp::draw_contents_deferred() {
     glClear(GL_COLOR_BUFFER_BIT);
     accBuffer->unbind();
 
-    if (config.pointLightsEnabled) {
-        std::vector<PointLight> lights;
-        for (const PointLight &light: scene->pointLights) {
-            lights.push_back(light);
-        }
+    std::vector<PointLight> lights;
+    for (const PointLight& light : scene->pointLights) {
+        lights.push_back(light);
+    }
 
-        if (config.convertAreaToPoint) {
-            for (const AreaLight &light: scene->areaLights) {
-                PointLight p;
-                p.position = light.center;
-                p.nodeToWorld = light.nodeToWorld;
-                p.power = light.power;
-                lights.push_back(p);
-            }
+    if (config.convertAreaToPoint) {
+        for (const AreaLight& light : scene->areaLights) {
+            PointLight p;
+            p.position = light.center;
+            p.nodeToWorld = light.nodeToWorld;
+            p.power = light.power;
+            lights.push_back(p);
         }
+    }
 
-        for (const PointLight &light: lights) {
+    if (config.toonEnabled) {
+        for (const PointLight& light : lights) {
             shadowMap->bind();
             glClear(GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
@@ -941,21 +989,44 @@ void PLApp::draw_contents_deferred() {
             glEnable(GL_BLEND);
             glBlendFunc(GL_ONE, GL_ONE);
             glViewport(0, 0, getViewportSize().x, getViewportSize().y);
-            deferred_lighting_pass(geomBuffer, shadowMap->depthTexture(), light);
+            toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light);
             glDisable(GL_BLEND);
             accBuffer->unbind();
+            break;
         }
-    }
+    } else {
+        if (config.pointLightsEnabled) {
+            for (const PointLight& light : lights) {
+                shadowMap->bind();
+                glClear(GL_DEPTH_BUFFER_BIT);
+                glEnable(GL_DEPTH_TEST);
+                glViewport(0, 0, config.shadowMapResolution.x, config.shadowMapResolution.y);
+                deferred_shadow_pass(light);
+                if (config.ocean) {
+                    deferred_ocean_shadow_pass(light);
+                }
+                shadowMap->unbind();
 
-    if (config.ambientLightsEnabled) {
-        for (const AmbientLight &light: scene->ambientLights) {
-            accBuffer->bind();
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_ONE, GL_ONE);
-            glViewport(0, 0, getViewportSize().x, getViewportSize().y);
-            deferred_ambient_pass(geomBuffer, light);
-            glDisable(GL_BLEND);
-            accBuffer->unbind();
+                accBuffer->bind();
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_ONE, GL_ONE);
+                glViewport(0, 0, getViewportSize().x, getViewportSize().y);
+                deferred_lighting_pass(geomBuffer, shadowMap->depthTexture(), light);
+                glDisable(GL_BLEND);
+                accBuffer->unbind();
+            }
+        }
+
+        if (config.ambientLightsEnabled) {
+            for (const AmbientLight& light : scene->ambientLights) {
+                accBuffer->bind();
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_ONE, GL_ONE);
+                glViewport(0, 0, getViewportSize().x, getViewportSize().y);
+                deferred_ambient_pass(geomBuffer, light);
+                glDisable(GL_BLEND);
+                accBuffer->unbind();
+            }
         }
     }
 

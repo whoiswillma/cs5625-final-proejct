@@ -1,6 +1,7 @@
 #include "Scene.h"
 
 #include <memory>
+#include <functional>
 
 glm::mat4 Node::getTransformTo(const std::shared_ptr<Node>& other) {
     if (other == nullptr) {

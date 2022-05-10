@@ -43,6 +43,7 @@ struct PLAppConfig {
     bool ambientLightsEnabled = true;
     bool sunskyEnabled = true;
     bool bloomFilterEnabled = true;
+    bool toonEnabled = false;
     TextureFilteringMode textureFilteringMode = TextureFilteringMode_Linear;
 
     bool ocean = false;
@@ -79,6 +80,7 @@ private:
     std::shared_ptr<GLWrap::Program> programFlat;
     std::shared_ptr<GLWrap::Program> programForward;
     std::shared_ptr<GLWrap::Program> programDeferredGeom;
+    std::shared_ptr<GLWrap::Program> programToonPoint;
     std::shared_ptr<GLWrap::Program> programDeferredShadow;
     std::shared_ptr<GLWrap::Program> programDeferredPoint;
     std::shared_ptr<GLWrap::Program> programDeferredAmbient;
@@ -130,6 +132,11 @@ private:
     void deferred_draw_pass(const std::shared_ptr<GLWrap::Framebuffer>& accBuffer);
     void deferred_shadow_pass(const PointLight &light);
     void deferred_ocean_shadow_pass(const PointLight &light);
+    void toon_lighting_pass(
+            const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
+            const GLWrap::Texture2D& shadowTexture,
+            const PointLight& light
+    );
     void deferred_lighting_pass(
             const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer,
             const GLWrap::Texture2D &shadowTexture,
