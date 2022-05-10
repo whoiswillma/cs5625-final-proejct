@@ -760,7 +760,7 @@ void PLApp::toon_lighting_pass(
 
     std::shared_ptr<GLWrap::Program> prog = programToonPoint;
     prog->use();
-    prog->uniform("viewportSize", getViewportSize());
+    prog->uniform("viewportSize", glm::vec2(getViewportSize().x, getViewportSize().y));
     prog->uniform("mV", cam->getViewMatrix());
     prog->uniform("mP", cam->getProjectionMatrix());
     prog->uniform("shadowBias", config.shadowBias);
@@ -784,6 +784,11 @@ void PLApp::toon_lighting_pass(
     prog->uniform("specularSmoothness", 0.0f);
     prog->uniform("edgeThreshold", 0.5f);
     prog->uniform("edgeIntensity", 3.0f);
+
+    prog->uniform("depthLineWidth", 2);
+    prog->uniform("depthLineThreshold", 0.001f);
+    prog->uniform("normalLineWidth", 2);
+    prog->uniform("normalLineThreshold", 2.0f);
 
     fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
     prog->unuse();
