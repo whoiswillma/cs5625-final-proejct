@@ -366,10 +366,12 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
                 return true;
             case GLFW_KEY_UP:
                 timer.setRate(timer.rate() + 0.25);
+                speed_up_birds();
                 std::cout << "[↑] Set rate: " << timer.rate() << "x" << std::endl;
                 return true;
             case GLFW_KEY_DOWN:
                 timer.setRate(timer.rate() - 0.25);
+                slow_down_birds();
                 std::cout << "[↓] Set rate: " << timer.rate() << "x" << std::endl;
                 return true;
             case GLFW_KEY_S:
@@ -1096,6 +1098,19 @@ void PLApp::draw_contents_deferred() {
 }
 
 bool PLApp::scatter = false;
+
+void PLApp::speed_up_birds() {
+    for (auto& bird : this->birds) {
+        bird.velocity += glm::vec3 { 0.05, 0, 0.05 };
+    }
+}
+
+void PLApp::slow_down_birds() {
+    for (auto& bird : this->birds) {
+        bird.velocity -= glm::vec3 { 0.05, 0, 0.05 };
+    }
+}
+
 void PLApp::animate_birds() {
     /* returns the vector we need to add to the position of the current boid to move it
      * 1% of the way to the center of mass of its neighbors
