@@ -183,5 +183,4 @@ private:
     std::vector<Bird> birds;
 };
 
-
 #endif //CS5625_PLAPP_H

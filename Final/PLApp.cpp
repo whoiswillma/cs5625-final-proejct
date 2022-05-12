@@ -1101,8 +1101,8 @@ void PLApp::animate_birds() {
         for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
             if (currBoid != currNeighbor) avgPosition += this->birds[currNeighbor].position;
         }
-        avgPosition /= (this->birds.size() - 1);
-        return (avgPosition - this->birds[currBoid].position) / 1000.f;
+        avgPosition /= glm::max((this->birds.size() - 1), 1UL);
+        return (avgPosition - this->birds[currBoid].position) / 5000.f;
     };
 
     /* returns the vector we need to add to the position of the current boid to prevent collision with
@@ -1112,20 +1112,22 @@ void PLApp::animate_birds() {
         glm::vec3 correctionAmt(0);
         for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
             if (currBoid != currNeighbor) {
-                if (glm::distance(this->birds[currBoid].position, this->birds[currNeighbor].position) <= 0.25) {
-                    correctionAmt -= (this->birds[currNeighbor].position - this->birds[currBoid].position);
+                float distance = glm::distance(this->birds[currBoid].position, this->birds[currNeighbor].position);
+                if (distance <= 0.25f) {
+                    correctionAmt -=
+                            (this->birds[currNeighbor].position - this->birds[currBoid].position);
                 }
             }
         }
 
         // if a bird is going to go out of bounds, make it turn hard
-        if (glm::dot(Bird::walls[0].normal, this->birds[currBoid].position - Bird::walls[0].point) <= 0.25)
+        if (glm::dot(Bird::walls[0].normal, this->birds[currBoid].position - Bird::walls[0].point) <= 1.0)
             correctionAmt.x -= 0.002;
-        if (glm::dot(Bird::walls[1].normal, this->birds[currBoid].position - Bird::walls[1].point) <= 0.25)
+        if (glm::dot(Bird::walls[1].normal, this->birds[currBoid].position - Bird::walls[1].point) <= 1.0)
             correctionAmt.x += 0.002;
-        if (glm::dot(Bird::walls[2].normal, this->birds[currBoid].position - Bird::walls[2].point) <= 0.25)
+        if (glm::dot(Bird::walls[2].normal, this->birds[currBoid].position - Bird::walls[2].point) <= 1.0)
             correctionAmt.z -= 0.002;
-        if (glm::dot(Bird::walls[3].normal, this->birds[currBoid].position - Bird::walls[3].point) <= 0.25)
+        if (glm::dot(Bird::walls[3].normal, this->birds[currBoid].position - Bird::walls[3].point) <= 1.0)
             correctionAmt.z += 0.002;
 
         return correctionAmt;
@@ -1137,17 +1139,18 @@ void PLApp::animate_birds() {
         for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
             if (currBoid != currNeighbor) avgVelocity += this->birds[currNeighbor].velocity;
         }
-        avgVelocity /= (this->birds.size() - 1);
-        return (avgVelocity - this->birds[currBoid].velocity) / 500.f;
+        avgVelocity /= glm::max((this->birds.size() - 1), 1UL);
+        return (avgVelocity - this->birds[currBoid].velocity) / 800.f;
     };
 
     for (size_t currBoid = 0; currBoid < this->birds.size(); currBoid++) {
-        this->birds[currBoid].velocity +=
-                center_of_mass(currBoid) +
-                course_correction(currBoid)  +
-                center_of_velocity(currBoid);
+        glm::vec3 deltaV = center_of_mass(currBoid) +
+                           course_correction(currBoid)  +
+                           center_of_velocity(currBoid);
+        deltaV.y = 0;
+        this->birds[currBoid].velocity += deltaV;
         this->birds[currBoid].position += this->birds[currBoid].velocity;
-        this->birds[currBoid].update_self();
+        this->birds[currBoid].update_self(deltaV);
     }
 }
 
