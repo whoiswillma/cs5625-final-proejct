@@ -300,5 +300,6 @@ std::shared_ptr<Scene> importScene(const aiScene* aiScene) {
     importLights(aiScene, scene->pointLights, scene->areaLights, scene->ambientLights);
     importAnimations(aiScene, scene->animations);
     updateNameToNode(scene, scene->root);
+    dumpNodeHierarchy(scene->root, 0);
     return scene;
 }
