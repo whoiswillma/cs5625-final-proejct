@@ -29,11 +29,18 @@ Bird::Bird(std::shared_ptr<Node> birdNode) {
         glm::length(glm::vec3(this->nodePtr->transform[1])),
         glm::length(glm::vec3(this->nodePtr->transform[2]))
     });
+    glm::mat4 transformCopy(this->nodePtr->transform);
+    transformCopy[3][0] = transformCopy[3][1] = transformCopy[3][2] = 0;
+    transformCopy[0] /= glm::length(transformCopy[0]);
+    transformCopy[1] /= glm::length(transformCopy[1]);
+    transformCopy[2] /= glm::length(transformCopy[2]);
+    this->rotation = transformCopy;
 
     update_self(glm::vec3(0));
 }
 
 void Bird::update_self(glm::vec3 deltaV) {
+
     if (glm::length(this->velocity) > this->initVelocity) this->velocity *= 0.99f;
     glm::qua<float> lookAtQuat = glm::quatLookAt(
             -glm::vec3{
@@ -49,5 +56,5 @@ void Bird::update_self(glm::vec3 deltaV) {
             glm::rotate(glm::mat4(1),
                         (deltaV.x + deltaV.z) * 100.f,
                         glm::normalize(this->velocity)) *
-            this->scale;
+            this->rotation * this->scale;
 }

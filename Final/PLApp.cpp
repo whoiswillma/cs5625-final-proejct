@@ -1033,7 +1033,7 @@ void PLApp::animate_birds() {
         for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
             if (currBoid != currNeighbor) avgPosition += this->birds[currNeighbor].position;
         }
-        avgPosition /= (this->birds.size() - 1);
+        avgPosition /= glm::max((this->birds.size() - 1), 1UL);
         return (avgPosition - this->birds[currBoid].position) / 5000.f;
     };
 
@@ -1071,7 +1071,7 @@ void PLApp::animate_birds() {
         for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
             if (currBoid != currNeighbor) avgVelocity += this->birds[currNeighbor].velocity;
         }
-        avgVelocity /= (this->birds.size() - 1);
+        avgVelocity /= glm::max((this->birds.size() - 1), 1UL);
         return (avgVelocity - this->birds[currBoid].velocity) / 800.f;
     };
 
@@ -1079,6 +1079,7 @@ void PLApp::animate_birds() {
         glm::vec3 deltaV = center_of_mass(currBoid) +
                            course_correction(currBoid)  +
                            center_of_velocity(currBoid);
+        deltaV.y = 0;
         this->birds[currBoid].velocity += deltaV;
         this->birds[currBoid].position += this->birds[currBoid].velocity;
         this->birds[currBoid].update_self(deltaV);

@@ -34,5 +34,6 @@ struct Bird
     float initVelocity;
     glm::vec3 velocity;
     glm::mat4 scale;
+    glm::mat4 rotation;
     std::shared_ptr<Node> nodePtr;
 };
