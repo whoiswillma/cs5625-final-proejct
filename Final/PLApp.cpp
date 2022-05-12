@@ -36,7 +36,8 @@ PLApp::PLApp(
          tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
          tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
          tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
-    }) {
+    }),
+    animators(scene) {
 
     resetFramebuffers();
     setUpPrograms();
@@ -637,20 +638,56 @@ void ocean_texture_normalize_and_store(
 }
 
 void PLApp::update_ocean_textures(double time) {
-    tessendorf::fourier_amplitudes(oceanBuffers.fourierAmplitudes, oceanScene->tessendorfIv, (float) time, oceanScene->config);
-    tessendorf::ifft(oceanBuffers.displacementMap, oceanBuffers.fourierAmplitudes, oceanBuffers.buffer, true);
-    ocean_texture_normalize_and_store(oceanDisplacementTexture, oceanBuffers.displacementA, oceanBuffers.displacementB,
-                                      oceanBuffers.displacementMap);
+    tessendorf::fourier_amplitudes(
+            oceanBuffers.fourierAmplitudes,
+            oceanScene->tessendorfIv,
+            (float) time,
+            oceanScene->config);
+    tessendorf::ifft(
+            oceanBuffers.displacementMap,
+            oceanBuffers.fourierAmplitudes,
+            oceanBuffers.buffer,
+            true);
+    tessendorf::gradient_amplitudes(
+            oceanBuffers.gradientXAmplitudes,
+            oceanBuffers.gradientZAmplitudes,
+            oceanBuffers.fourierAmplitudes,
+            oceanScene->config);
+    tessendorf::ifft(
+            oceanBuffers.gradXMap,
+            oceanBuffers.gradientXAmplitudes,
+            oceanBuffers.buffer,
+            false);
+    tessendorf::ifft(
+            oceanBuffers.gradZMap,
+            oceanBuffers.gradientZAmplitudes,
+            oceanBuffers.buffer,
+            false);
 
-    tessendorf::gradient_amplitudes(oceanBuffers.gradientXAmplitudes, oceanBuffers.gradientZAmplitudes, oceanBuffers.fourierAmplitudes, oceanScene->config);
+    for (auto & animator : animators.boatAnimators) {
+        animator.update(
+                oceanBuffers.displacementMap,
+                oceanBuffers.gradXMap,
+                oceanBuffers.gradZMap,
+                oceanScene->transform()
+        );
+    }
 
-    tessendorf::ifft(oceanBuffers.gradXMap, oceanBuffers.gradientXAmplitudes, oceanBuffers.buffer, false);
-    ocean_texture_normalize_and_store(oceanGradXTexture, oceanBuffers.gradXA, oceanBuffers.gradXB,
-                                      oceanBuffers.gradXMap);
-
-    tessendorf::ifft(oceanBuffers.gradZMap, oceanBuffers.gradientZAmplitudes, oceanBuffers.buffer, false);
-    ocean_texture_normalize_and_store(oceanGradZTexture, oceanBuffers.gradZA, oceanBuffers.gradZB,
-                                      oceanBuffers.gradZMap);
+    ocean_texture_normalize_and_store(
+            oceanDisplacementTexture,
+            oceanBuffers.displacementA,
+            oceanBuffers.displacementB,
+            oceanBuffers.displacementMap);
+    ocean_texture_normalize_and_store(
+            oceanGradXTexture,
+            oceanBuffers.gradXA,
+            oceanBuffers.gradXB,
+            oceanBuffers.gradXMap);
+    ocean_texture_normalize_and_store(
+            oceanGradZTexture,
+            oceanBuffers.gradZA,
+            oceanBuffers.gradZB,
+            oceanBuffers.gradZMap);
 }
 
 void PLApp::deferred_ocean_geometry_pass() {

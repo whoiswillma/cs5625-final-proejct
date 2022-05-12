@@ -13,6 +13,7 @@
 #include <RTUtil/Camera.hpp>
 #include <RTUtil/CameraController.hpp>
 #include <GLWrap/Framebuffer.hpp>
+#include "Animators.h"
 #include "Tessendorf.h"
 #include "Timer.h"
 #include "Bird.hpp"
@@ -168,6 +169,8 @@ private:
         tessendorf::array2d<float> gradZMap;
         float gradZA, gradZB;
     } oceanBuffers;
+
+    Animators animators;
 
     std::shared_ptr<GLWrap::Texture2D> oceanDisplacementTexture;
     std::shared_ptr<GLWrap::Texture2D> oceanGradXTexture;
