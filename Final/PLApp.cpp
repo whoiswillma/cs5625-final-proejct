@@ -333,27 +333,27 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
                 return true;
             case GLFW_KEY_1:
                 shadingMode = ShadingMode_Flat;
-                //std::cout << "Switched to flat shading" << std::endl;
+                std::cout << "Switched to flat shading" << std::endl;
                 return true;
             case GLFW_KEY_2:
                 shadingMode = ShadingMode_Forward;
-                //std::cout << "Switched to forward shading" << std::endl;
+                std::cout << "Switched to forward shading" << std::endl;
                 return true;
             case GLFW_KEY_3:
                 shadingMode = ShadingMode_Deferred;
-                //std::cout << "Switched to deferred shading" << std::endl;
+                std::cout << "Switched to deferred shading" << std::endl;
                 return true;
             case GLFW_KEY_SPACE:
                 timer.setPlaying(!timer.playing());
-                //std::cout << "[ ] Set playback: " << (timer.playing() ? "playing" : "paused") << std::endl;
+                std::cout << "[ ] Set playback: " << (timer.playing() ? "playing" : "paused") << std::endl;
                 return true;
             case GLFW_KEY_COMMA:
                 timer.offset(-0.01);
-                //std::cout << "[<] Skip backward: 0.01s" << std::endl;
+                std::cout << "[<] Skip backward: 0.01s" << std::endl;
                 return true;
             case GLFW_KEY_LEFT:
                 timer.offset(-0.1);
-                //std::cout << "[←] Skip backward: 0.1s" << std::endl;
+                std::cout << "[←] Skip backward: 0.1s" << std::endl;
                 return true;
             case GLFW_KEY_PERIOD:
                 timer.offset(0.01);
@@ -361,15 +361,15 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
                 return true;
             case GLFW_KEY_RIGHT:
                 timer.offset(0.1);
-                //std::cout << "[→] Skip forward: 0.1s" << std::endl;
+                std::cout << "[→] Skip forward: 0.1s" << std::endl;
                 return true;
             case GLFW_KEY_UP:
                 timer.setRate(timer.rate() + 0.25);
-                //std::cout << "[↑] Set rate: " << timer.rate() << "x" << std::endl;
+                std::cout << "[↑] Set rate: " << timer.rate() << "x" << std::endl;
                 return true;
             case GLFW_KEY_DOWN:
                 timer.setRate(timer.rate() - 0.25);
-                //std::cout << "[↓] Set rate: " << timer.rate() << "x" << std::endl;
+                std::cout << "[↓] Set rate: " << timer.rate() << "x" << std::endl;
                 return true;
             default:
                 break;
@@ -633,6 +633,7 @@ void ocean_texture_normalize_and_store(
             GL_FLOAT,
             buffer.data.get()
     );
+    texture->generateMipmap();
 }
 
 void PLApp::update_ocean_textures(double time) {
