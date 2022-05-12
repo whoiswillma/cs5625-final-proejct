@@ -176,6 +176,7 @@ private:
     void update_ocean_textures(double time);
 
     void add_birds(std::shared_ptr<Node> curr_node);
+    static bool scatter;
     void animate_birds();
     std::vector<Bird> birds;
 };
