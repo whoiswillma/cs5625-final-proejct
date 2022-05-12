@@ -37,6 +37,11 @@ struct PLAppConfig {
     float thetaSun = glm::pi<float>() / 3;
     float turbidity = 4;
     int ssaoNumSamples = 15;
+    int depthLineWidth = 2;
+    float depthLineThreshold = 0.001f;
+    int normalLineWidth = 2;
+    float normalLineThreshold = 2.0f;
+    bool fxaaEnabled = true;
     bool pcfEnabled = true;
     bool pointLightsEnabled = true;
     bool convertAreaToPoint = true;
@@ -81,6 +86,7 @@ private:
     std::shared_ptr<GLWrap::Program> programForward;
     std::shared_ptr<GLWrap::Program> programDeferredGeom;
     std::shared_ptr<GLWrap::Program> programToonPoint;
+    std::shared_ptr<GLWrap::Program> programToonOutline;
     std::shared_ptr<GLWrap::Program> programDeferredShadow;
     std::shared_ptr<GLWrap::Program> programDeferredPoint;
     std::shared_ptr<GLWrap::Program> programDeferredAmbient;
@@ -102,7 +108,7 @@ private:
     std::shared_ptr<GLWrap::Framebuffer> geomBuffer;
 
     // size = viewport, color attachments = 1, depth attachment = no, with mipmaps
-    std::shared_ptr<GLWrap::Framebuffer> accBuffer, temp1, temp2;
+    std::shared_ptr<GLWrap::Framebuffer> accBuffer, temp1, temp2, toonBuffer;
 
     // size = shadow map resolution, color attachments = 0, depth attachment = yes
     std::shared_ptr<GLWrap::Framebuffer> shadowMap;
@@ -136,6 +142,10 @@ private:
             const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
             const GLWrap::Texture2D& shadowTexture,
             const PointLight& light
+    );
+    void toon_outline_pass(
+            const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
+            const GLWrap::Texture2D& image
     );
     void deferred_lighting_pass(
             const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer,

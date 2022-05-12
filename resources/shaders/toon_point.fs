@@ -4,9 +4,6 @@
 uniform float shadowBias = 1e-3;
 uniform mat4 mV;
 uniform mat4 mP;
-uniform sampler2D depthTex;
-uniform sampler2D normalsTex;
-uniform vec2 viewportSize;
 
 // Light Properties
 uniform vec3 vLightPos;
@@ -23,14 +20,6 @@ uniform float specularSmoothness;
 // Edge Properties
 uniform float edgeThreshold;
 uniform float edgeIntensity;
-
-// Depth line Properties
-uniform int depthLineWidth;
-uniform float depthLineThreshold;
-
-// Normal line Properties
-uniform int normalLineWidth;
-uniform float normalLineThreshold;
 
 // Inputs
 in vec2 geom_texCoord;
@@ -100,33 +89,4 @@ void main() {
         }
     }
     
-    float myDepth = texture(depthTex, geom_texCoord).x;
-    float leftDepth = texture(depthTex, geom_texCoord + vec2(-depthLineWidth, 0) / viewportSize).x;
-    float rightDepth = texture(depthTex, geom_texCoord + vec2(depthLineWidth, 0) / viewportSize).x;
-    float downDepth = texture(depthTex, geom_texCoord + vec2(0, -depthLineWidth) / viewportSize).x;
-    float upDepth = texture(depthTex, geom_texCoord + vec2(0, depthLineWidth) / viewportSize).x;
-
-    float depthTest = (myDepth - leftDepth) + (myDepth - rightDepth) + (myDepth - downDepth) + (myDepth - upDepth);
-    if (depthTest > depthLineThreshold) {
-        fragColor.xyz = vec3(0);
-        fragColor.w = 1;
-    }
-
-    vec3 leftNormal = normalize(2 * texture(normalsTex, geom_texCoord + vec2(-normalLineWidth, 0) / viewportSize).xyz - 1);
-    vec3 normalDiff = abs(inputs.normal - leftNormal);
-    float normalTest = normalDiff.x + normalDiff.y + normalDiff.z;
-    vec3 rightNormal = normalize(2 * texture(normalsTex, geom_texCoord + vec2(normalLineWidth, 0) / viewportSize).xyz - 1);
-    normalDiff = abs(inputs.normal - rightNormal);
-    normalTest += normalDiff.x + normalDiff.y + normalDiff.z;
-    vec3 downNormal = normalize(2 * texture(normalsTex, geom_texCoord + vec2(0, -normalLineWidth) / viewportSize).xyz - 1);
-    normalDiff = abs(inputs.normal - downNormal);
-    normalTest += normalDiff.x + normalDiff.y + normalDiff.z;
-    vec3 upNormal = normalize(2 * texture(normalsTex, geom_texCoord + vec2(0, normalLineWidth) / viewportSize).xyz - 1);
-    normalDiff = abs(inputs.normal - upNormal);
-    normalTest += normalDiff.x + normalDiff.y + normalDiff.z;
-
-    if (normalTest > normalLineThreshold) {
-        fragColor.xyz = vec3(0);
-        fragColor.w = 1;
-    }
 }

@@ -52,7 +52,7 @@ void PLApp::resetFramebuffers() {
     geomBuffer = std::make_shared<GLWrap::Framebuffer>(getViewportSize(), 3);
 
     std::vector<std::shared_ptr<GLWrap::Framebuffer> *> colorBuffers = {
-            &accBuffer, &temp1, &temp2
+            &accBuffer, &temp1, &temp2, &toonBuffer
     };
 
     for (auto &colorBufferPtr: colorBuffers) {
@@ -105,6 +105,11 @@ void PLApp::setUpPrograms() {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shader_inputs.fs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/toon_point.fs"}
+    }));
+
+    programToonOutline = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred toon outline pass", {
+            {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/toon_outline.fs"}
     }));
 
     programDeferredShadow = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred shadow pass", {
@@ -263,6 +268,23 @@ void PLApp::setUpNanoguiControls() {
     auto ssao = gui->add_variable("SSAO Samples", config.ssaoNumSamples);
     ssao->set_spinnable(true);
     ssao->set_min_max_values(0, 100);
+
+    gui->add_group("Outline");
+    gui->add_variable("FXAA", config.fxaaEnabled);
+
+    auto depthLineWidth = gui->add_variable("Depth Line Width", config.depthLineWidth);
+    depthLineWidth->set_spinnable(true);
+    depthLineWidth->set_min_max_values(0, 10);
+
+    auto depthLineThreshold = gui->add_variable("Depth Line Threshold", config.depthLineThreshold);
+    depthLineThreshold->set_min_max_values(0, 10);
+
+    auto normalLineWidth = gui->add_variable("Normal Line Width", config.normalLineWidth);
+    normalLineWidth->set_spinnable(true);
+    normalLineWidth->set_min_max_values(0, 10);
+
+    auto normalLineThreshold = gui->add_variable("Normal Line Threshold", config.normalLineThreshold);
+    normalLineThreshold->set_min_max_values(0, 10);
 
     gui->add_group("Sunsky");
     gui->add_variable("Enabled", config.sunskyEnabled);
@@ -785,10 +807,32 @@ void PLApp::toon_lighting_pass(
     prog->uniform("edgeThreshold", 0.5f);
     prog->uniform("edgeIntensity", 3.0f);
 
-    prog->uniform("depthLineWidth", 2);
-    prog->uniform("depthLineThreshold", 0.001f);
-    prog->uniform("normalLineWidth", 2);
-    prog->uniform("normalLineThreshold", 2.0f);
+    fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
+    prog->unuse();
+}
+
+void PLApp::toon_outline_pass(
+    const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
+    const GLWrap::Texture2D& image
+) {
+    image.bindToTextureUnit(0);
+    geomBuffer->colorTexture(2).bindToTextureUnit(1);
+    geomBuffer->depthTexture().bindToTextureUnit(2);
+
+    std::shared_ptr<GLWrap::Program> prog = programToonOutline;
+    prog->use();
+    prog->uniform("viewportSize", glm::vec2(getViewportSize().x, getViewportSize().y));
+    prog->uniform("imageTex", 0);
+    prog->uniform("normalsTex", 1);
+    prog->uniform("depthTex", 2);
+    prog->uniform("fxaaEnabled", config.fxaaEnabled);
+
+    prog->uniform("depthLineWidth", config.depthLineWidth);
+    prog->uniform("depthLineThreshold", config.depthLineThreshold);
+    prog->uniform("normalLineWidth", config.normalLineWidth);
+    prog->uniform("normalLineThreshold", config.normalLineThreshold);
+    prog->uniform("AAThreshold", 0.5f);
+    prog->uniform("AAIntensity", 2.0f);
 
     fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
     prog->unuse();
@@ -1045,6 +1089,13 @@ void PLApp::draw_contents_deferred() {
 
         // Swap temp1 and accBuffer
         std::swap(accBuffer, temp1);
+    }
+
+    if (config.toonEnabled) {
+        std::swap(accBuffer, toonBuffer);
+        accBuffer->bind();
+        toon_outline_pass(geomBuffer, toonBuffer->colorTexture());
+        accBuffer->unbind();
     }
 
     if (config.bloomFilterEnabled) {
