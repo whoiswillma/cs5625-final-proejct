@@ -43,7 +43,7 @@ struct PLAppConfig {
     bool convertAreaToPoint = true;
     bool ambientLightsEnabled = true;
     bool sunskyEnabled = false;
-    bool bloomFilterEnabled = true;
+    bool bloomFilterEnabled = false;
     TextureFilteringMode textureFilteringMode = TextureFilteringMode_Linear;
 
     bool ocean = false;
@@ -175,7 +175,7 @@ private:
 
     void update_ocean_textures(double time);
 
-    void add_birds(std::shared_ptr<Node> currChils);
+    void add_birds(std::shared_ptr<Node> curr_node);
     void animate_birds();
     std::vector<Bird> birds;
 };
