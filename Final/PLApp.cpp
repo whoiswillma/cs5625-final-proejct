@@ -1121,7 +1121,7 @@ void PLApp::draw_contents() {
     GLWrap::checkGLError("drawContents start");
 
     scene->animate(timer.time());
-    if (config.birds) {
+    if (config.birds && timer.playing()) {
         animate_birds();
     }
 
