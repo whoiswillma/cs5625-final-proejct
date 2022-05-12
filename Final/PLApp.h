@@ -66,7 +66,7 @@ public:
     virtual bool resize_event(const nanogui::Vector2i &size) override;
 
     virtual void draw_contents() override;
-	virtual void load_texture(const char*);
+	//virtual void load_texture(const char*);
 private:
     void setUpNanoguiControls();
     void setUpMeshes();
@@ -88,9 +88,11 @@ private:
     std::shared_ptr<GLWrap::Program> programDeferredBlur;
     std::shared_ptr<GLWrap::Program> programDeferredMerge;
     std::shared_ptr<GLWrap::Program> programSrgb;
+	std::shared_ptr<GLWrap::Program> programTextureSrgb;
     std::shared_ptr<GLWrap::Program> programOceanForward;
     std::shared_ptr<GLWrap::Program> programOceanDeferredGeom;
     std::shared_ptr<GLWrap::Program> programOceanDeferredShadow;
+	std::shared_ptr<GLWrap::Program> programTextureDeferred;
 
     std::vector<std::shared_ptr<GLWrap::Mesh>> meshes;
     std::shared_ptr<GLWrap::Mesh> fsqMesh;
@@ -130,6 +132,7 @@ private:
     glm::ivec2 getViewportSize();
 
     void deferred_geometry_pass();
+	void deferred_texture_pass();
     void deferred_ocean_geometry_pass();
     void draw_contents_deferred();
     void deferred_draw_pass(const std::shared_ptr<GLWrap::Framebuffer>& accBuffer);

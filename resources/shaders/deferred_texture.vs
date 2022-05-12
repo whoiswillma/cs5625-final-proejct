@@ -13,14 +13,12 @@ layout (location = 1) in vec3 normal;
 layout (location = 4) in vec3 uv;
 
 uniform bool useBones = false;
-uniform bool useTextures = false;
 uniform mat4 boneTransforms[100];
 layout (location = 2) in ivec4 boneIds;
 layout (location = 3) in vec4 boneWts;
 
 out vec3 vPosition; // vertex position in eye space
-out vec3 vNormal;  // vertex normal in eye space
-out vec2 TexCoord; // texture coordinates
+out vec3 vNormal;   // vertex normal in eye space
 
 void main()
 {

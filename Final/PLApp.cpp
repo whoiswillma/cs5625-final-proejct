@@ -46,7 +46,7 @@ PLApp::PLApp(
     setUpMeshes();
     setUpNanoguiControls();
     setUpTextures();
-	load_texture("../resources/scenes/bsptD.jpg");
+	//load_texture("../resources/scenes/bsptD.jpg");
     if (config.birds) {
         add_birds(this->scene->root);
     }
@@ -54,29 +54,29 @@ PLApp::PLApp(
     set_visible(true);
 }
 
-void PLApp::load_texture(const char* filename) {
-
-	unsigned int texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	// set the texture wrapping/filtering options (on the currently bound texture object)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	// load and generate the texture
-	this->textureData = stbi_load(filename, &texture_width, &texture_height, &texture_Channels, 0);
-	if (textureData)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture_width, texture_height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	stbi_image_free(textureData);
-}
+//void PLApp::load_texture(const char* filename) {
+//
+//	unsigned int texture;
+//	glGenTextures(1, &texture);
+//	glBindTexture(GL_TEXTURE_2D, texture);
+//	// set the texture wrapping/filtering options (on the currently bound texture object)
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//	// load and generate the texture
+//	this->textureData = stbi_load(filename, &texture_width, &texture_height, &texture_Channels, 0);
+//	if (textureData)
+//	{
+//		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture_width, texture_height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
+//		glGenerateMipmap(GL_TEXTURE_2D);
+//	}
+//	else
+//	{
+//		std::cout << "Failed to load texture" << std::endl;
+//	}
+//	stbi_image_free(textureData);
+//}
 void PLApp::add_birds(std::shared_ptr<Node> curr_node) {
     if (Bird::is_bird(curr_node->name)) {
         this->birds.push_back(Bird(curr_node));
@@ -189,10 +189,19 @@ void PLApp::setUpPrograms() {
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shadow.fs"}
     }));
 
+	programTextureDeferred = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred Texture pass", {
+			{GL_VERTEX_SHADER,   resourcePath + "shaders/deferred_texture.vs"},
+			{GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_geom_texture.fs"}
+	}));
+
     programSrgb = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("srgb", {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/srgb.fs"}
     }));
+	programTextureSrgb = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("texture_srgb", {
+		{GL_VERTEX_SHADER,   resourcePath + "shaders/texturefsq.vs"},
+		{GL_FRAGMENT_SHADER, resourcePath + "shaders/texturesrgb.fs"}
+		}));
 }
 
 void PLApp::setUpCamera() {
@@ -208,6 +217,7 @@ void PLApp::setUpMeshes() {
         glWrapMesh->setAttribute(1, mesh.normals);
         glWrapMesh->setAttribute(2, mesh.boneIndices);
         glWrapMesh->setAttribute(3, mesh.boneWeights);
+		glWrapMesh->setAttribute(4, mesh.uvcoordinates);
         glWrapMesh->setIndices(mesh.indices, GL_TRIANGLES);
 
         meshes.push_back(std::move(glWrapMesh));
@@ -565,6 +575,74 @@ void PLApp::draw_contents_forward() {
 /*****************************************************************************
  * DEFERRED SHADING                                                          *
  *****************************************************************************/
+
+void PLApp::deferred_texture_pass() {
+	std::shared_ptr<GLWrap::Program> prog = programTextureDeferred;
+	prog->use();
+
+	prog->uniform("mV", cam->getViewMatrix());
+	prog->uniform("mP", cam->getProjectionMatrix());
+
+	unsigned int texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	// set the texture wrapping/filtering options (on the currently bound texture object)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// load and generate the texture
+	this->textureData = stbi_load("../resources/scenes/bsptD.jpg", &texture_width, &texture_height, &texture_Channels, 0);
+	if (textureData)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture_width, texture_height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	//stbi_image_free(textureData);
+
+	// Perform a depth-first traversal of the scene graph and draw all the nodes.
+	std::vector<std::shared_ptr<Node>> nodes = { scene->root };
+	while (!nodes.empty()) {
+		std::shared_ptr<Node> node = nodes.back();
+		nodes.pop_back();
+
+		for (const std::shared_ptr<Node> &child : node->children) {
+			nodes.push_back(child);
+		}
+
+		prog->uniform("mM", node->getTransformTo(nullptr));
+
+		for (unsigned int i : node->meshIndices) {
+			Mesh mesh = scene->meshes[i];
+			Material material = scene->materials[mesh.materialIndex];
+			prog->uniform("alpha", material.roughnessFactor);
+			prog->uniform("eta", 1.5f);
+			prog->uniform("diffuseReflectance", material.color);
+
+			prog->uniform("useBones", !mesh.bones.empty());
+			if (!mesh.bones.empty()) {
+				for (int j = 0; j < mesh.bones.size(); j++) {
+					auto bone = mesh.bones[j];
+					std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+					glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
+
+					prog->uniform(
+						"boneTransforms[" + std::to_string(j) + "]",
+						boneTransform
+					);
+				}
+			}
+
+			meshes[i]->drawElements();
+		}
+	}
+
+	prog->unuse();
+}
 
 void PLApp::deferred_geometry_pass() {
     std::shared_ptr<GLWrap::Program> prog = programDeferredGeom;

@@ -51,6 +51,7 @@ struct Mesh {
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec3> normals;
     std::vector<uint32_t> indices;
+	std::vector<glm::vec3> uvcoordinates;
     uint32_t materialIndex;
 
     std::vector<std::pair<std::string, glm::mat4>> bones;
