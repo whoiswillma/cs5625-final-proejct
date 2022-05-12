@@ -33,12 +33,12 @@ struct OceanScene {
     glm::mat4 transform(glm::vec2 gridLocation = glm::vec2(0, 0)) const;
     std::vector<glm::vec2> visibleGridLocations(
             glm::mat4 mWorldToNDC,
-            int softLimit = 1000,
+            int visibleLimit = 1000,
             int searchRadius = 100
     );
 
 private:
-    bool gridLocationIsVisible(glm::vec2 gridLocation, glm::mat4 mWorldToNDC, float bias) const;
+    bool gridLocationIsVisible(glm::vec2 gridLocation, glm::mat4 mViewProj) const;
 };
 
 #endif //CS5625_OCEANSCENE_H

@@ -201,4 +201,3 @@ endfunction(createExecutable)
 # Can comment out ones you are not currently concerned with to save compile time.
 createExecutable("Demo")
 createExecutable("Final")
-createExecutable("pocketfft_testing")

@@ -60,27 +60,27 @@ glm::mat4 OceanScene::transform(glm::vec2 gridLocation) const {
         * glm::translate(glm::vec3(-0.5 + gridLocation.x, 0, -0.5 + gridLocation.y));
 }
 
-bool OceanScene::gridLocationIsVisible(glm::vec2 gridLocation, glm::mat4 mWorldToNDC, float bias) const {
-    glm::mat4 gridToNDC = mWorldToNDC * OceanScene::transform(gridLocation);
-    glm::vec3 testPoints[9] = {
-            MulUtil::mulh(gridToNDC, glm::vec3(0, 0, 0), 1),
-            MulUtil::mulh(gridToNDC, glm::vec3(0, 0, 1), 1),
-            MulUtil::mulh(gridToNDC, glm::vec3(1, 0, 0), 1),
-            MulUtil::mulh(gridToNDC, glm::vec3(1, 0, 1), 1),
-            MulUtil::mulh(gridToNDC, glm::vec3(0.5, 0.5, 0), 1),
-            MulUtil::mulh(gridToNDC, glm::vec3(0.5, 0, 0), 1),
-            MulUtil::mulh(gridToNDC, glm::vec3(-0.5, 0, 0), 1),
-            MulUtil::mulh(gridToNDC, glm::vec3(0, 0.5, 0), 1),
-            MulUtil::mulh(gridToNDC, glm::vec3(0, -0.5, 0), 1),
-    };
+bool OceanScene::gridLocationIsVisible(glm::vec2 gridLocation, glm::mat4 mViewProj) const {
+    glm::mat4 gridToNDC = mViewProj * transform(gridLocation);
 
+    // TODO: improve this with triangle/cube intersection tests
+
+    const int n = 5;
+    std::vector<glm::vec3> testPoints;
+    for (int i = 0; i < n; i++) {
+        float x = (float) i / (float) (n - 1);
+        for (int j = 0; j < n; j++) {
+            float y = (float) j / (float) (n - 1);
+            testPoints.push_back(MulUtil::mulh(gridToNDC, glm::vec3(x, 0, y), 1));
+        }
+    }
     bool anyPointVisible = false;
 
     for (auto & point : testPoints) {
         bool thisPointVisible = true;
 
         for (int j = 0; j < 3; j++) {
-            if (!(-1.0f - bias <= point[j] && point[j] <= 1.0f + bias)) {
+            if (!(-1.0f <= point[j] && point[j] <= 1.0f)) {
                 thisPointVisible = false;
                 break;
             }
@@ -121,21 +121,31 @@ public:
 };
 
 
-std::vector<glm::vec2> OceanScene::visibleGridLocations(glm::mat4 mWorldToNDC, int softLimit, int searchRadius) {
+std::vector<glm::vec2> OceanScene::visibleGridLocations(glm::mat4 mViewProj, int visibleLimit, int searchRadius) {
     std::vector<glm::vec2> visibleGridLocations;
 
     std::deque<glm::vec2> queue;
-    queue.emplace_back(0, 0);
+    {   // Cast a ray into the scene and use the nearest grid location as the starting point of the search.
+        glm::mat4 mNdcToGrid = glm::inverse(mViewProj * transform());
+        glm::vec3 near = MulUtil::mulh(mNdcToGrid, glm::vec3(0, 0, -1), 1);
+        glm::vec3 far = MulUtil::mulh(mNdcToGrid, glm::vec3(0, 0, 1), 1);
+
+        const float a = far.y / (far.y - near.y);
+        glm::vec3 intersection = a * near + (1 - a) * far;
+        glm::vec2 gridPoint = glm::round(glm::vec2(intersection.x, intersection.z));
+        queue.push_back(gridPoint);
+        for (auto & gridLocation : adjacentGridLocations(gridPoint)) {
+            queue.push_back(gridLocation);
+        }
+    }
 
     std::unordered_set<glm::vec2, Vec2Hasher> visited;
 
-    int phase0Time = 0;
-    int phase = 0;
     int searchLimit = (2 * searchRadius + 1) * (2 * searchRadius + 1);
     while (
             visited.size() < searchLimit
             && !queue.empty()
-            && (softLimit == -1 || visibleGridLocations.size() < softLimit)
+            && (visibleLimit == -1 || visibleGridLocations.size() < visibleLimit)
     ) {
         glm::vec2 gridPoint = queue.front();
         queue.pop_front();
@@ -145,25 +155,14 @@ std::vector<glm::vec2> OceanScene::visibleGridLocations(glm::mat4 mWorldToNDC, i
         }
         visited.insert(gridPoint);
 
-        bool visible = gridLocationIsVisible(gridPoint, mWorldToNDC, 1e-5);
+        bool visible = gridLocationIsVisible(gridPoint, mViewProj);
         if (visible) {
-            phase = 1;
             visibleGridLocations.push_back(gridPoint);
-        }
-
-        if ((phase == 0) || (phase == 1 && visible)) {
             for (auto & gridLocation : adjacentGridLocations(gridPoint)) {
                 queue.push_back(gridLocation);
             }
         }
-
-        if (phase == 0) {
-            phase0Time++;
-        }
     }
-
-    std::cout << "ratio: " << (float) visibleGridLocations.size() / (float) visited.size() << std::endl;
-    std::cout << visibleGridLocations.size() << ", " << phase0Time << ", " << std::endl;
 
     return visibleGridLocations;
 }
