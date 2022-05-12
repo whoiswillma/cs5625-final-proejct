@@ -24,7 +24,7 @@ Bird::Bird(std::shared_ptr<Node> birdNode) {
     this->position = glm::vec3{ dist_int(mt), 7.5, dist_int(mt) };
     this->velocity = glm::vec3{ dist_real(mt), 0, dist_real(mt) };
     this->initVelocity = glm::length(this->velocity);
-    this->scale = glm::scale(glm::mat4(1), glm::vec3{
+    glm::mat4 scaleMat = glm::scale(glm::mat4(1), glm::vec3{
         glm::length(glm::vec3(this->nodePtr->transform[0])),
         glm::length(glm::vec3(this->nodePtr->transform[1])),
         glm::length(glm::vec3(this->nodePtr->transform[2]))
@@ -34,7 +34,8 @@ Bird::Bird(std::shared_ptr<Node> birdNode) {
     transformCopy[0] /= glm::length(transformCopy[0]);
     transformCopy[1] /= glm::length(transformCopy[1]);
     transformCopy[2] /= glm::length(transformCopy[2]);
-    this->rotation = transformCopy;
+    glm::mat4 rotationMat= transformCopy;
+    this->rotScale = rotationMat * scaleMat;
 
     update_self(glm::vec3(0));
 }
@@ -43,11 +44,11 @@ void Bird::update_self(glm::vec3 deltaV) {
 
     if (glm::length(this->velocity) > this->initVelocity) this->velocity *= 0.99f;
     glm::qua<float> lookAtQuat = glm::quatLookAt(
-            -glm::vec3{
+            -glm::normalize(glm::vec3{
                 this->velocity.x,
                 this->velocity.y,
                 this->velocity.z
-                },
+                }),
             glm::vec3{ 0, 1, 0 }
         );
     this->nodePtr->transform =
@@ -56,5 +57,5 @@ void Bird::update_self(glm::vec3 deltaV) {
             glm::rotate(glm::mat4(1),
                         (deltaV.x + deltaV.z) * 100.f,
                         glm::normalize(this->velocity)) *
-            this->rotation * this->scale;
+            this->rotScale;
 }

@@ -366,11 +366,16 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
                 return true;
             case GLFW_KEY_UP:
                 timer.setRate(timer.rate() + 0.25);
+                speed_up_birds();
                 std::cout << "[↑] Set rate: " << timer.rate() << "x" << std::endl;
                 return true;
             case GLFW_KEY_DOWN:
                 timer.setRate(timer.rate() - 0.25);
+                slow_down_birds();
                 std::cout << "[↓] Set rate: " << timer.rate() << "x" << std::endl;
+                return true;
+            case GLFW_KEY_S:
+                PLApp::scatter = true;
                 return true;
             default:
                 break;
@@ -1092,6 +1097,20 @@ void PLApp::draw_contents_deferred() {
     deferred_draw_pass(accBuffer);
 }
 
+bool PLApp::scatter = false;
+
+void PLApp::speed_up_birds() {
+    for (auto& bird : this->birds) {
+        bird.velocity += glm::vec3 { 0.05, 0, 0.05 };
+    }
+}
+
+void PLApp::slow_down_birds() {
+    for (auto& bird : this->birds) {
+        bird.velocity -= glm::vec3 { 0.05, 0, 0.05 };
+    }
+}
+
 void PLApp::animate_birds() {
     /* returns the vector we need to add to the position of the current boid to move it
      * 1% of the way to the center of mass of its neighbors
@@ -1143,22 +1162,38 @@ void PLApp::animate_birds() {
         return (avgVelocity - this->birds[currBoid].velocity) / 800.f;
     };
 
+    const auto calc_scatter = [&](const size_t currBoid) -> glm::vec3 {
+        glm::vec3 avgPosition(0);
+        for (const auto& bird : this->birds) {
+            avgPosition += bird.position;
+        }
+        avgPosition /= glm::max(this->birds.size(), 1UL);
+
+        glm::vec3 scatterVector =  this->birds[currBoid].position - avgPosition;
+        const auto scatterFactor = 1.f / glm::length(scatterVector);
+        return glm::normalize(scatterVector) * scatterFactor;
+    };
+
     for (size_t currBoid = 0; currBoid < this->birds.size(); currBoid++) {
         glm::vec3 deltaV = center_of_mass(currBoid) +
                            course_correction(currBoid)  +
                            center_of_velocity(currBoid);
+        if (PLApp::scatter) {
+            deltaV += calc_scatter(currBoid);
+        }
         deltaV.y = 0;
         this->birds[currBoid].velocity += deltaV;
         this->birds[currBoid].position += this->birds[currBoid].velocity;
         this->birds[currBoid].update_self(deltaV);
     }
+    if (PLApp::scatter) PLApp::scatter = false;
 }
 
 void PLApp::draw_contents() {
     GLWrap::checkGLError("drawContents start");
 
     scene->animate(timer.time());
-    if (config.birds) {
+    if (config.birds && timer.playing()) {
         animate_birds();
     }
 
