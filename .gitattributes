@@ -1,1 +1,6 @@
-* text eol=lf
+*.cpp text eol=lf
+*.hpp text eol=lf
+*.h text eol=lf
+*.c text eol=lf
+*.vs text eol=lf
+*.fs text eol=lf
