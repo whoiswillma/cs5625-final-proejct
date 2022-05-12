@@ -1101,13 +1101,13 @@ bool PLApp::scatter = false;
 
 void PLApp::speed_up_birds() {
     for (auto& bird : this->birds) {
-        bird.velocity += glm::vec3 { 0.05, 0, 0.05 };
+        bird.velocity += (glm::vec3 { 0.2, 0, 0.2 }) * bird.velocity;
     }
 }
 
 void PLApp::slow_down_birds() {
     for (auto& bird : this->birds) {
-        bird.velocity -= glm::vec3 { 0.05, 0, 0.05 };
+        bird.velocity -= (glm::vec3 { 0.2, 0, 0.2 }) * bird.velocity;
     }
 }
 
