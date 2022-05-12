@@ -43,7 +43,7 @@ struct PLAppConfig {
     bool convertAreaToPoint = true;
     bool ambientLightsEnabled = true;
     bool sunskyEnabled = false;
-    bool bloomFilterEnabled = true;
+    bool bloomFilterEnabled = false;
     TextureFilteringMode textureFilteringMode = TextureFilteringMode_Linear;
 
     bool ocean = false;

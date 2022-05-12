@@ -5,6 +5,9 @@
 #include <glm/gtx/transform.hpp>
 #include "OceanScene.h"
 #include "glm/glm.hpp"
+#include "MulUtil.hpp"
+#include "RTUtil/output.hpp"
+#include <unordered_set>
 
 OceanMesh::OceanMesh(int n, int m) {
     for (int j = 0; j < m; j++) {
@@ -39,19 +42,127 @@ OceanMesh::OceanMesh(int n, int m) {
 }
 
 OceanScene::OceanScene(glm::vec2 sizeMeters, glm::ivec2 gridSize) :
-        mesh(gridSize.x, gridSize.y),
-        sizeMeters(sizeMeters),
-        gridSize(gridSize),
-        tessendorfIv(tessendorf::sample_initialization_vector(gridSize, {})),
-        config({
-            10.0f,
-            sizeMeters,
-            12.0f,
-            glm::normalize(glm::vec2(1.0, 0.2)),
-            3.0f
-        }){
-    const auto I = glm::identity<glm::mat4>();
-    transform = glm::translate(glm::vec3(0, -1, 0))
-            * glm::scale(glm::vec3(sizeMeters.x, 1.0f, sizeMeters.y))
-            * glm::translate(glm::vec3(-0.5, 0, -0.5));
+	mesh(gridSize.x, gridSize.y),
+	sizeMeters(sizeMeters),
+	gridSize(gridSize),
+	tessendorfIv(tessendorf::sample_initialization_vector(gridSize, std::default_random_engine())),
+	config({
+		10.0f,
+		sizeMeters,
+		12.0f,
+		glm::normalize(glm::vec2(1.0, 0.2)),
+		3.0f
+		}) {
+}
+
+glm::mat4 OceanScene::transform(glm::vec2 gridLocation) const {
+    return glm::scale(glm::vec3(sizeMeters.x, 1.0f, sizeMeters.y))
+        * glm::translate(glm::vec3(-0.5 + gridLocation.x, 0, -0.5 + gridLocation.y));
+}
+
+bool OceanScene::gridLocationIsVisible(glm::vec2 gridLocation, glm::mat4 mViewProj) const {
+    glm::mat4 gridToNDC = mViewProj * transform(gridLocation);
+
+    // TODO: improve this with triangle/cube intersection tests
+
+    const int n = 5;
+    std::vector<glm::vec3> testPoints;
+    for (int i = 0; i < n; i++) {
+        float x = (float) i / (float) (n - 1);
+        for (int j = 0; j < n; j++) {
+            float y = (float) j / (float) (n - 1);
+            testPoints.push_back(MulUtil::mulh(gridToNDC, glm::vec3(x, 0, y), 1));
+        }
+    }
+    bool anyPointVisible = false;
+
+    for (auto & point : testPoints) {
+        bool thisPointVisible = true;
+
+        for (int j = 0; j < 3; j++) {
+            if (!(-1.0f <= point[j] && point[j] <= 1.0f)) {
+                thisPointVisible = false;
+                break;
+            }
+        }
+
+        if (thisPointVisible) {
+            anyPointVisible = true;
+            break;
+        }
+    }
+
+    return anyPointVisible;
+}
+
+std::vector<glm::vec2> adjacentGridLocations(glm::vec2 gridLocation) {
+    return {
+        gridLocation + glm::vec2(1, 0),
+        gridLocation + glm::vec2(1, 1),
+        gridLocation + glm::vec2(0, 1),
+        gridLocation + glm::vec2(-1, 1),
+        gridLocation + glm::vec2(-1, 0),
+        gridLocation + glm::vec2(-1, -1),
+        gridLocation + glm::vec2(0, -1),
+        gridLocation + glm::vec2(1, -1),
+    };
+}
+
+
+struct Vec2Hasher {
+public:
+    size_t operator()(glm::vec2 vec) const {
+        std::hash<float> hasher;
+
+        // https://stackoverflow.com/questions/2590677/how-do-i-combine-hash-values-in-c0x
+        size_t seed = hasher(vec.x);
+        return seed ^ (hasher(vec.y) + 0x9e3779b9 + (seed<<6) + (seed>>2));
+    }
+};
+
+
+std::vector<glm::vec2> OceanScene::visibleGridLocations(glm::mat4 mViewProj, int visibleLimit, int searchRadius) {
+    std::vector<glm::vec2> visibleGridLocations;
+
+    std::deque<glm::vec2> queue;
+    {   // Cast a ray into the scene and use the nearest grid location as the starting point of the search.
+        glm::mat4 mNdcToGrid = glm::inverse(mViewProj * transform());
+        glm::vec3 near = MulUtil::mulh(mNdcToGrid, glm::vec3(0, 0, -1), 1);
+        glm::vec3 far = MulUtil::mulh(mNdcToGrid, glm::vec3(0, 0, 1), 1);
+
+        const float a = far.y / (far.y - near.y);
+        glm::vec3 intersection = a * near + (1 - a) * far;
+        glm::vec2 gridPoint = glm::round(glm::vec2(intersection.x, intersection.z));
+        queue.push_back(gridPoint);
+        for (auto & gridLocation : adjacentGridLocations(gridPoint)) {
+            queue.push_back(gridLocation);
+        }
+    }
+
+    std::unordered_set<glm::vec2, Vec2Hasher> visited;
+
+    int searchLimit = (2 * searchRadius + 1) * (2 * searchRadius + 1);
+    while (
+            visited.size() < searchLimit
+            && !queue.empty()
+            && (visibleLimit == -1 || visibleGridLocations.size() < visibleLimit)
+    ) {
+        glm::vec2 gridPoint = queue.front();
+        queue.pop_front();
+
+        if (visited.find(gridPoint) != visited.end()) {
+            continue;
+        }
+        visited.insert(gridPoint);
+
+        bool visible = gridLocationIsVisible(gridPoint, mViewProj);
+        if (visible) {
+            visibleGridLocations.push_back(gridPoint);
+            for (auto & gridLocation : adjacentGridLocations(gridPoint)) {
+                queue.push_back(gridLocation);
+            }
+        }
+    }
+
+    return visibleGridLocations;
 }

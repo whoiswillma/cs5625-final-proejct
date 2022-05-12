@@ -299,14 +299,26 @@ void PLApp::setUpTextures() {
     oceanDisplacementTexture = std::make_shared<GLWrap::Texture2D>(
             oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
     );
+    oceanDisplacementTexture->parameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    oceanDisplacementTexture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    oceanDisplacementTexture->parameter(GL_TEXTURE_WRAP_S, GL_REPEAT);
+    oceanDisplacementTexture->parameter(GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     oceanGradXTexture = std::make_shared<GLWrap::Texture2D>(
             oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
     );
+    oceanGradXTexture->parameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    oceanGradXTexture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    oceanGradXTexture->parameter(GL_TEXTURE_WRAP_S, GL_REPEAT);
+    oceanGradXTexture->parameter(GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     oceanGradZTexture = std::make_shared<GLWrap::Texture2D>(
             oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
     );
+    oceanGradZTexture->parameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    oceanGradZTexture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    oceanGradZTexture->parameter(GL_TEXTURE_WRAP_S, GL_REPEAT);
+    oceanGradZTexture->parameter(GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
 bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
@@ -501,7 +513,6 @@ void PLApp::draw_contents_forward() {
 
         prog->uniform("mV", cam->getViewMatrix());
         prog->uniform("mP", cam->getProjectionMatrix());
-        prog->uniform("mM", oceanScene->transform);
 
         prog->uniform("lightPower", light.power);
         prog->uniform("vLightPos", MulUtil::mulh(
@@ -531,7 +542,15 @@ void PLApp::draw_contents_forward() {
         prog->uniform("gradZA", oceanBuffers.gradZA);
         prog->uniform("gradZB", oceanBuffers.gradZB);
 
-        oceanMesh->drawElements();
+        std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(
+                cam->getViewProjectionMatrix(),
+                -1,
+                10
+        );
+        for (auto & gridLocation : visibleGrid) {
+            prog->uniform("mM", oceanScene->transform(gridLocation));
+            oceanMesh->drawElements();
+        }
 
         prog->unuse();
     }
@@ -588,7 +607,7 @@ void PLApp::deferred_geometry_pass() {
     prog->unuse();
 }
 
-void texture_normalize_and_store(
+void ocean_texture_normalize_and_store(
         const std::shared_ptr<GLWrap::Texture2D>& texture,
         float &scale,
         float &offset,
@@ -619,15 +638,18 @@ void texture_normalize_and_store(
 void PLApp::update_ocean_textures(double time) {
     tessendorf::fourier_amplitudes(oceanBuffers.fourierAmplitudes, oceanScene->tessendorfIv, (float) time, oceanScene->config);
     tessendorf::ifft(oceanBuffers.displacementMap, oceanBuffers.fourierAmplitudes, oceanBuffers.buffer, true);
-    texture_normalize_and_store(oceanDisplacementTexture, oceanBuffers.displacementA, oceanBuffers.displacementB, oceanBuffers.displacementMap);
+    ocean_texture_normalize_and_store(oceanDisplacementTexture, oceanBuffers.displacementA, oceanBuffers.displacementB,
+                                      oceanBuffers.displacementMap);
 
     tessendorf::gradient_amplitudes(oceanBuffers.gradientXAmplitudes, oceanBuffers.gradientZAmplitudes, oceanBuffers.fourierAmplitudes, oceanScene->config);
 
     tessendorf::ifft(oceanBuffers.gradXMap, oceanBuffers.gradientXAmplitudes, oceanBuffers.buffer, false);
-    texture_normalize_and_store(oceanGradXTexture, oceanBuffers.gradXA, oceanBuffers.gradXB, oceanBuffers.gradXMap);
+    ocean_texture_normalize_and_store(oceanGradXTexture, oceanBuffers.gradXA, oceanBuffers.gradXB,
+                                      oceanBuffers.gradXMap);
 
     tessendorf::ifft(oceanBuffers.gradZMap, oceanBuffers.gradientZAmplitudes, oceanBuffers.buffer, false);
-    texture_normalize_and_store(oceanGradZTexture, oceanBuffers.gradZA, oceanBuffers.gradZB, oceanBuffers.gradZMap);
+    ocean_texture_normalize_and_store(oceanGradZTexture, oceanBuffers.gradZA, oceanBuffers.gradZB,
+                                      oceanBuffers.gradZMap);
 }
 
 void PLApp::deferred_ocean_geometry_pass() {
@@ -636,7 +658,6 @@ void PLApp::deferred_ocean_geometry_pass() {
 
     prog->uniform("mV", cam->getViewMatrix());
     prog->uniform("mP", cam->getProjectionMatrix());
-    prog->uniform("mM", oceanScene->transform);
 
     prog->uniform("alpha", 0.5f);
     prog->uniform("eta", 1.5f);
@@ -657,7 +678,11 @@ void PLApp::deferred_ocean_geometry_pass() {
     prog->uniform("gradZA", oceanBuffers.gradZA);
     prog->uniform("gradZB", oceanBuffers.gradZB);
 
-    oceanMesh->drawElements();
+    std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(cam->getViewProjectionMatrix());
+    for (auto & gridLocation : visibleGrid) {
+        prog->uniform("mM", oceanScene->transform(gridLocation));
+        oceanMesh->drawElements();
+    }
 
     prog->unuse();
 }
@@ -727,7 +752,6 @@ void PLApp::deferred_ocean_shadow_pass(
     RTUtil::PerspectiveCamera lightCamera = get_light_camera(light);
     prog->uniform("mV", lightCamera.getViewMatrix());
     prog->uniform("mP", lightCamera.getProjectionMatrix());
-    prog->uniform("mM", oceanScene->transform);
 
     oceanDisplacementTexture->bindToTextureUnit(0);
     prog->uniform("displacementMap", 0);
@@ -743,6 +767,12 @@ void PLApp::deferred_ocean_shadow_pass(
     prog->uniform("gradZMap", 2);
     prog->uniform("gradZA", oceanBuffers.gradZA);
     prog->uniform("gradZB", oceanBuffers.gradZB);
+
+    std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(cam->getViewProjectionMatrix());
+    for (auto & gridLocation : visibleGrid) {
+        prog->uniform("mM", oceanScene->transform(gridLocation));
+        oceanMesh->drawElements();
+    }
 
     prog->unuse();
 }

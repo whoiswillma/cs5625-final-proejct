@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     );
 
     std::shared_ptr<OceanScene> ocean = std::make_shared<OceanScene>(
-            glm::vec2(16, 16),
+            glm::vec2(20, 20),
             glm::vec2(128, 128)
     );
 
