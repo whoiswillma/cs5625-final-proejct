@@ -27,13 +27,11 @@ struct AreaLight {
     float height;
     glm::vec3 center;
     glm::vec3 power;
-    glm::mat4 nodeToWorld;
 };
 
 struct PointLight {
     std::string name;
     glm::vec3 position;
-    glm::mat4 nodeToWorld;
     glm::vec3 power;
 };
 
@@ -75,14 +73,18 @@ struct Scene {
     std::vector<Mesh> meshes;
     std::shared_ptr<RTUtil::PerspectiveCamera> camera;
     std::vector<Material> materials;
-    std::vector<PointLight> pointLights;
-    std::vector<AreaLight> areaLights;
-    std::vector<AmbientLight> ambientLights;
+    std::vector<std::shared_ptr<PointLight>> pointLights;
+    std::vector<std::shared_ptr<AreaLight>> areaLights;
+    std::vector<std::shared_ptr<AmbientLight>> ambientLights;
     std::shared_ptr<Node> root;
     std::vector<Animation> animations;
 
-    std::map<std::string, std::shared_ptr<Node>> nameToNode;
     void animate(double time, unsigned int animationIdx = 0);
+
+    std::shared_ptr<Node> findNode(const std::string& name);
+
+private:
+    std::map<std::string, std::shared_ptr<Node>> nameToNode;
 };
 
 #endif //CS5625_SCENE_H

@@ -92,6 +92,7 @@ private:
 
     std::shared_ptr<Scene> scene;
     std::shared_ptr<OceanScene> oceanScene;
+    Animators animators;
 
     std::shared_ptr<GLWrap::Program> programFlat;
     std::shared_ptr<GLWrap::Program> programForward;
@@ -109,6 +110,7 @@ private:
     std::shared_ptr<GLWrap::Program> programOceanDeferredDirectional;
 
     std::vector<std::shared_ptr<GLWrap::Mesh>> meshes;
+    std::shared_ptr<GLWrap::Mesh> oceanMesh;
     std::shared_ptr<GLWrap::Mesh> fsqMesh;
 
     std::shared_ptr<RTUtil::PerspectiveCamera> cam;
@@ -166,12 +168,6 @@ private:
             int level
     );
     void deferred_merge_pass(const GLWrap::Texture2D &image, const GLWrap::Texture2D &blurred);
-
-    std::shared_ptr<GLWrap::Mesh> oceanMesh;
-
-    Animators animators;
-
-    void update_ocean_textures(double time);
 };
 
 #endif //CS5625_PLAPP_H

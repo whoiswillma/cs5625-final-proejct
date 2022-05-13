@@ -434,12 +434,13 @@ void PLApp::draw_contents_forward() {
     glEnable(GL_DEPTH_TEST);
 
     PointLight light;
+    glm::mat4 lightTransform;
     if (scene->pointLights.empty()) {
-        light.nodeToWorld = glm::identity<glm::mat4>();
+        lightTransform = glm::mat4(1);
         light.position = glm::vec3(3, 4, 5);
         light.power = glm::vec3(1000, 1000, 1000);
     } else {
-        light = scene->pointLights.front();
+        light = *scene->pointLights.front();
     }
 
     {
@@ -451,7 +452,7 @@ void PLApp::draw_contents_forward() {
 
         prog->uniform("lightPower", light.power);
         prog->uniform("vLightPos", MulUtil::mulh(
-                cam->getViewMatrix() * light.nodeToWorld,
+                cam->getViewMatrix() * lightTransform,
                 light.position,
                 1
         ));
@@ -478,7 +479,7 @@ void PLApp::draw_contents_forward() {
                 if (!mesh.bones.empty()) {
                     for (int j = 0; j < mesh.bones.size(); j++) {
                         auto bone = mesh.bones[j];
-                        std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+                        std::shared_ptr<Node> boneNode = scene->findNode(bone.first);
                         glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
 
                         prog->uniform(
@@ -504,7 +505,7 @@ void PLApp::draw_contents_forward() {
 
         prog->uniform("lightPower", light.power);
         prog->uniform("vLightPos", MulUtil::mulh(
-                cam->getViewMatrix() * light.nodeToWorld,
+                cam->getViewMatrix() * scene->findNode(light.name)->getTransformTo(nullptr),
                 light.position,
                 1
         ));
@@ -565,7 +566,7 @@ void PLApp::deferred_geometry_pass() {
             if (!mesh.bones.empty()) {
                 for (int j = 0; j < mesh.bones.size(); j++) {
                     auto bone = mesh.bones[j];
-                    std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+                    std::shared_ptr<Node> boneNode = scene->findNode(bone.first);
                     glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
 
                     prog->uniform(
@@ -613,7 +614,7 @@ void PLApp::deferred_ocean_geometry_pass() {
 
 RTUtil::PerspectiveCamera PLApp::get_light_camera(const PointLight &light) const {
     return {
-            MulUtil::mulh(light.nodeToWorld, light.position, 1),
+            MulUtil::mulh(scene->findNode(light.name)->getTransformTo(nullptr), light.position, 1),
             glm::vec3(0, 0, 0),
             glm::vec3(0, 1, 0),
             1,
@@ -651,7 +652,7 @@ void PLApp::deferred_shadow_pass(
             if (!mesh.bones.empty()) {
                 for (int j = 0; j < mesh.bones.size(); j++) {
                     auto bone = mesh.bones[j];
-                    std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+                    std::shared_ptr<Node> boneNode = scene->findNode(bone.first);
                     glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
 
                     prog->uniform(
@@ -732,7 +733,7 @@ void PLApp::deferred_lighting_pass(
     prog->uniform("mP_light", lightCamera.getProjectionMatrix());
     prog->uniform("lightPower", light.power);
     prog->uniform("vLightPos", MulUtil::mulh(
-            cam->getViewMatrix() * light.nodeToWorld,
+            cam->getViewMatrix() * scene->findNode(light.name)->getTransformTo(nullptr),
             light.position,
             1
     ));
@@ -906,16 +907,16 @@ void PLApp::draw_contents_deferred() {
 
     if (config.pointLightsEnabled) {
         std::vector<PointLight> lights;
-        for (const PointLight &light: scene->pointLights) {
-            lights.push_back(light);
+        for (auto & light: scene->pointLights) {
+            lights.push_back(*light);
         }
 
         if (config.convertAreaToPoint) {
-            for (const AreaLight &light: scene->areaLights) {
+            for (auto & light: scene->areaLights) {
                 PointLight p;
-                p.position = light.center;
-                p.nodeToWorld = light.nodeToWorld;
-                p.power = light.power;
+                p.name = light->name;
+                p.position = light->center;
+                p.power = light->power;
                 lights.push_back(p);
             }
         }
@@ -942,12 +943,12 @@ void PLApp::draw_contents_deferred() {
     }
 
     if (config.ambientLightsEnabled) {
-        for (const AmbientLight &light: scene->ambientLights) {
+        for (auto & light: scene->ambientLights) {
             accBuffer->bind();
             glEnable(GL_BLEND);
             glBlendFunc(GL_ONE, GL_ONE);
             glViewport(0, 0, getViewportSize().x, getViewportSize().y);
-            deferred_ambient_pass(geomBuffer, light);
+            deferred_ambient_pass(geomBuffer, *light);
             glDisable(GL_BLEND);
             accBuffer->unbind();
         }
@@ -1033,6 +1034,11 @@ void PLApp::draw_contents() {
                     animators.oceanAnimator.buffers.gradZMap,
                     oceanScene->transform()
             );
+        }
+    }
+    if (config.sunskyEnabled) {
+        for (auto & animator : animators.sunLightAnimators) {
+            animator.update(config.thetaSun);
         }
     }
     if (config.birds && timer.playing()) {
