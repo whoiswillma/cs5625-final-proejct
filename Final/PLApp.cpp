@@ -224,7 +224,7 @@ void PLApp::setUpNanoguiControls() {
     gui->add_group("Image");
     gui->add_variable("Exposure", config.exposure)->set_spinnable(true);
 
-    gui->add_group("Point");
+    auto pointGroup = gui->add_group("Point");
     gui->add_variable("Enabled", config.pointLightsEnabled);
 
     gui->add_variable("Convert area to point", config.convertAreaToPoint);
@@ -297,29 +297,29 @@ void PLApp::setUpNanoguiControls() {
 }
 
 void PLApp::setUpTextures() {
-    oceanDisplacementTexture = std::make_shared<GLWrap::Texture2D>(
+    oceanTextures.displacementTexture = std::make_shared<GLWrap::Texture2D>(
             oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
     );
-    oceanDisplacementTexture->parameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    oceanDisplacementTexture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    oceanDisplacementTexture->parameter(GL_TEXTURE_WRAP_S, GL_REPEAT);
-    oceanDisplacementTexture->parameter(GL_TEXTURE_WRAP_T, GL_REPEAT);
+    oceanTextures.displacementTexture->parameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    oceanTextures.displacementTexture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    oceanTextures.displacementTexture->parameter(GL_TEXTURE_WRAP_S, GL_REPEAT);
+    oceanTextures.displacementTexture->parameter(GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    oceanGradXTexture = std::make_shared<GLWrap::Texture2D>(
+    oceanTextures.gradXTexture = std::make_shared<GLWrap::Texture2D>(
             oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
     );
-    oceanGradXTexture->parameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    oceanGradXTexture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    oceanGradXTexture->parameter(GL_TEXTURE_WRAP_S, GL_REPEAT);
-    oceanGradXTexture->parameter(GL_TEXTURE_WRAP_T, GL_REPEAT);
+    oceanTextures.gradXTexture->parameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    oceanTextures.gradXTexture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    oceanTextures.gradXTexture->parameter(GL_TEXTURE_WRAP_S, GL_REPEAT);
+    oceanTextures.gradXTexture->parameter(GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    oceanGradZTexture = std::make_shared<GLWrap::Texture2D>(
+    oceanTextures.gradZTexture = std::make_shared<GLWrap::Texture2D>(
             oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
     );
-    oceanGradZTexture->parameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    oceanGradZTexture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    oceanGradZTexture->parameter(GL_TEXTURE_WRAP_S, GL_REPEAT);
-    oceanGradZTexture->parameter(GL_TEXTURE_WRAP_T, GL_REPEAT);
+    oceanTextures.gradZTexture->parameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    oceanTextures.gradZTexture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    oceanTextures.gradZTexture->parameter(GL_TEXTURE_WRAP_S, GL_REPEAT);
+    oceanTextures.gradZTexture->parameter(GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
 bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
@@ -533,17 +533,17 @@ void PLApp::draw_contents_forward() {
 
         update_ocean_textures(timer.time());
 
-        oceanDisplacementTexture->bindToTextureUnit(0);
+        oceanTextures.displacementTexture->bindToTextureUnit(0);
         prog->uniform("displacementMap", 0);
         prog->uniform("displacementA", oceanBuffers.displacementA);
         prog->uniform("displacementB", oceanBuffers.displacementB);
 
-        oceanGradXTexture->bindToTextureUnit(1);
+        oceanTextures.gradXTexture->bindToTextureUnit(1);
         prog->uniform("gradXMap", 1);
         prog->uniform("gradXA", oceanBuffers.gradXA);
         prog->uniform("gradXB", oceanBuffers.gradXB);
 
-        oceanGradZTexture->bindToTextureUnit(2);
+        oceanTextures.gradZTexture->bindToTextureUnit(2);
         prog->uniform("gradZMap", 2);
         prog->uniform("gradZA", oceanBuffers.gradZA);
         prog->uniform("gradZB", oceanBuffers.gradZB);
@@ -669,6 +669,8 @@ void PLApp::update_ocean_textures(double time) {
             oceanBuffers.buffer,
             false);
 
+    // It's important than the animator gets called before ocean_texture_normalize_and_store because that function
+    // mutates the maps.
     for (auto & animator : animators.boatAnimators) {
         animator.update(
                 oceanBuffers.displacementMap,
@@ -679,17 +681,17 @@ void PLApp::update_ocean_textures(double time) {
     }
 
     ocean_texture_normalize_and_store(
-            oceanDisplacementTexture,
+            oceanTextures.displacementTexture,
             oceanBuffers.displacementA,
             oceanBuffers.displacementB,
             oceanBuffers.displacementMap);
     ocean_texture_normalize_and_store(
-            oceanGradXTexture,
+            oceanTextures.gradXTexture,
             oceanBuffers.gradXA,
             oceanBuffers.gradXB,
             oceanBuffers.gradXMap);
     ocean_texture_normalize_and_store(
-            oceanGradZTexture,
+            oceanTextures.gradZTexture,
             oceanBuffers.gradZA,
             oceanBuffers.gradZB,
             oceanBuffers.gradZMap);
@@ -706,17 +708,17 @@ void PLApp::deferred_ocean_geometry_pass() {
     prog->uniform("eta", 1.5f);
     prog->uniform("diffuseReflectance", glm::vec3(0.2, 0.3, 0.5));
 
-    oceanDisplacementTexture->bindToTextureUnit(0);
+    oceanTextures.displacementTexture->bindToTextureUnit(0);
     prog->uniform("displacementMap", 0);
     prog->uniform("displacementA", oceanBuffers.displacementA);
     prog->uniform("displacementB", oceanBuffers.displacementB);
 
-    oceanGradXTexture->bindToTextureUnit(1);
+    oceanTextures.gradXTexture->bindToTextureUnit(1);
     prog->uniform("gradXMap", 1);
     prog->uniform("gradXA", oceanBuffers.gradXA);
     prog->uniform("gradXB", oceanBuffers.gradXB);
 
-    oceanGradZTexture->bindToTextureUnit(2);
+    oceanTextures.gradZTexture->bindToTextureUnit(2);
     prog->uniform("gradZMap", 2);
     prog->uniform("gradZA", oceanBuffers.gradZA);
     prog->uniform("gradZB", oceanBuffers.gradZB);
@@ -796,17 +798,17 @@ void PLApp::deferred_ocean_shadow_pass(
     prog->uniform("mV", lightCamera.getViewMatrix());
     prog->uniform("mP", lightCamera.getProjectionMatrix());
 
-    oceanDisplacementTexture->bindToTextureUnit(0);
+    oceanTextures.displacementTexture->bindToTextureUnit(0);
     prog->uniform("displacementMap", 0);
     prog->uniform("displacementA", oceanBuffers.displacementA);
     prog->uniform("displacementB", oceanBuffers.displacementB);
 
-    oceanGradXTexture->bindToTextureUnit(1);
+    oceanTextures.gradXTexture->bindToTextureUnit(1);
     prog->uniform("gradXMap", 1);
     prog->uniform("gradXA", oceanBuffers.gradXA);
     prog->uniform("gradXB", oceanBuffers.gradXB);
 
-    oceanGradZTexture->bindToTextureUnit(2);
+    oceanTextures.gradZTexture->bindToTextureUnit(2);
     prog->uniform("gradZMap", 2);
     prog->uniform("gradZA", oceanBuffers.gradZA);
     prog->uniform("gradZB", oceanBuffers.gradZB);

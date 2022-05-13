@@ -170,11 +170,13 @@ private:
         float gradZA, gradZB;
     } oceanBuffers;
 
-    Animators animators;
+    struct OceanTextures {
+        std::shared_ptr<GLWrap::Texture2D> displacementTexture;
+        std::shared_ptr<GLWrap::Texture2D> gradXTexture;
+        std::shared_ptr<GLWrap::Texture2D> gradZTexture;
+    } oceanTextures;
 
-    std::shared_ptr<GLWrap::Texture2D> oceanDisplacementTexture;
-    std::shared_ptr<GLWrap::Texture2D> oceanGradXTexture;
-    std::shared_ptr<GLWrap::Texture2D> oceanGradZTexture;
+    Animators animators;
 
     void update_ocean_textures(double time);
 
