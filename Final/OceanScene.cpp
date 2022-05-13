@@ -129,7 +129,7 @@ std::vector<glm::vec2> OceanScene::visibleGridLocations(glm::mat4 mViewProj, int
         glm::mat4 mNdcToGrid = glm::inverse(mViewProj * transform());
 
         for (int x = 0; x <= 0; x++) {
-            for (int y = 0; y <= 0; y++) {
+            for (int y = -1; y <= 0; y++) {
                 glm::vec3 near = MulUtil::mulh(mNdcToGrid, glm::vec3(x, y, -1), 1);
                 glm::vec3 far = MulUtil::mulh(mNdcToGrid, glm::vec3(x, y, 1), 1);
 

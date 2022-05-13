@@ -5,12 +5,17 @@
 #include "SunLightNodeAnimator.h"
 
 #include "RTUtil/output.hpp"
+#include "RTUtil/Sky.hpp"
 #include <glm/gtx/transform.hpp>
 #include <utility>
 
-SunLightNodeAnimator::SunLightNodeAnimator(std::shared_ptr<Node> sunLightNode) : node(std::move(sunLightNode)) {
+SunLightNodeAnimator::SunLightNodeAnimator(
+        std::shared_ptr<PointLight> light,
+        std::shared_ptr<Node> node
+) : node(std::move(node)),
+    light(std::move(light)) {
 }
 
-void SunLightNodeAnimator::update(float thetaSun) {
+void SunLightNodeAnimator::update(float thetaSun, float turbidity) {
     node->transform = glm::rotate(thetaSun, glm::vec3(0, 0, 1));
 }

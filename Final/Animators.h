@@ -15,7 +15,7 @@
 
 // TODO: refactor lbs animation into a LbsNodeAnimator, and add it here
 class Animators {
-    void addAnimators(const std::shared_ptr<Node>& node);
+    void addAnimators(const std::shared_ptr<Scene>& scene, const std::shared_ptr<Node>& node);
 
 public:
     std::vector<BoatNodeAnimator> boatAnimators;

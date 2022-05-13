@@ -1039,7 +1039,7 @@ void PLApp::draw_contents() {
     }
     if (config.sunskyEnabled) {
         for (auto & animator : animators.sunLightAnimators) {
-            animator.update(config.thetaSun);
+            animator.update(config.thetaSun, config.turbidity);
         }
     }
     if (config.birds && timer.playing()) {

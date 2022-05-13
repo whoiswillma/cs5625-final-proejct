@@ -9,15 +9,12 @@
 #include "Scene.h"
 
 class SunLightNodeAnimator {
+    std::shared_ptr<PointLight> light;
     std::shared_ptr<Node> node;
 
 public:
-    static bool is_sun_light(const std::string& nodeName) {
-        return nodeName == "SunLight";
-    };
-
-    explicit SunLightNodeAnimator(std::shared_ptr<Node>  sunLightNode);
-    void update(float thetaSun);
+    explicit SunLightNodeAnimator(std::shared_ptr<PointLight> light, std::shared_ptr<Node> node);
+    void update(float thetaSun, float turbidity);
 };
 
 
