@@ -12,7 +12,6 @@
 #include "RTUtil/Sky.hpp"
 #include "GLWrap/Framebuffer.hpp"
 #include "MulUtil.hpp"
-#include "Tessendorf.h"
 
 PLApp::PLApp(
         const std::shared_ptr<Scene> &scene,
@@ -286,6 +285,11 @@ void PLApp::setUpNanoguiControls() {
         nanoguiWindows.ocean = gui->add_window(nanogui::Vector2i(x, 10), "Ocean");
         auto oceanShadingMode = gui->add_variable("Shading Mode", config.oceanShadingMode);
         oceanShadingMode->set_items({"Plastic", "Tessendorf", "Toon"});
+
+        auto renderDist = gui->add_variable("Render Distance", config.renderDistance);
+        renderDist->set_min_max_values(10, 200);
+        renderDist->set_spinnable(true);
+        renderDist->set_value_increment(5);
     }
 
     perform_layout();
@@ -516,7 +520,7 @@ void PLApp::draw_contents_forward() {
         std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(
                 cam->getViewProjectionMatrix(),
                 -1,
-                10
+                (int) (2.0f * config.renderDistance / sqrt(oceanScene->sizeMeters.x * oceanScene->sizeMeters.y) + 1.0f)
         );
         for (auto & gridLocation : visibleGrid) {
             prog->uniform("mM", oceanScene->transform(gridLocation));
@@ -594,7 +598,11 @@ void PLApp::deferred_ocean_geometry_pass() {
     animators.oceanAnimator.gradX.bindTextureAndUniforms("gradX", prog, 1);
     animators.oceanAnimator.gradZ.bindTextureAndUniforms("gradZ", prog, 2);
 
-    std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(cam->getViewProjectionMatrix());
+    std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(
+            cam->getViewProjectionMatrix(),
+            -1,
+            (int) (2.0f * config.renderDistance / sqrt(oceanScene->sizeMeters.x * oceanScene->sizeMeters.y) + 1.0f)
+    );
     for (auto & gridLocation : visibleGrid) {
         prog->uniform("mM", oceanScene->transform(gridLocation));
         oceanMesh->drawElements();
@@ -673,7 +681,11 @@ void PLApp::deferred_ocean_shadow_pass(
     animators.oceanAnimator.gradX.bindTextureAndUniforms("gradX", prog, 1);
     animators.oceanAnimator.gradZ.bindTextureAndUniforms("gradZ", prog, 2);
 
-    std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(cam->getViewProjectionMatrix());
+    std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(
+            cam->getViewProjectionMatrix(),
+            -1,
+            (int) (2.0f * config.renderDistance / sqrt(oceanScene->sizeMeters.x * oceanScene->sizeMeters.y) + 1.0f)
+    );
     for (auto & gridLocation : visibleGrid) {
         prog->uniform("mM", oceanScene->transform(gridLocation));
         oceanMesh->drawElements();
@@ -795,6 +807,7 @@ void PLApp::deferred_ocean_directional_pass(const std::shared_ptr<GLWrap::Frameb
     // Bind uniforms in deferred_ocean_directional.fs
     prog->uniform("mV", cam->getViewMatrix());
     prog->uniform("upwelling", oceanScene->upwelling);
+    prog->uniform("renderDistance", config.renderDistance);
 
     fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
     prog->unuse();

@@ -55,6 +55,8 @@ struct PLAppConfig {
 
     bool ocean = false;
     OceanShadingMode oceanShadingMode = OceanShadingMode_Tessendorf;
+    float renderDistance = 100;
+
     bool birds = false;
 };
 

@@ -128,8 +128,8 @@ std::vector<glm::vec2> OceanScene::visibleGridLocations(glm::mat4 mViewProj, int
     {   // Cast a bunch of rays into the scene and use the nearest grid location as the starting point of the search.
         glm::mat4 mNdcToGrid = glm::inverse(mViewProj * transform());
 
-        for (int x = -1; x <= 1; x++) {
-            for (int y = -1; y <= 1; y++) {
+        for (int x = 0; x <= 0; x++) {
+            for (int y = 0; y <= 0; y++) {
                 glm::vec3 near = MulUtil::mulh(mNdcToGrid, glm::vec3(x, y, -1), 1);
                 glm::vec3 far = MulUtil::mulh(mNdcToGrid, glm::vec3(x, y, 1), 1);
 
