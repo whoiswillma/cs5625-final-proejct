@@ -125,17 +125,19 @@ std::vector<glm::vec2> OceanScene::visibleGridLocations(glm::mat4 mViewProj, int
     std::vector<glm::vec2> visibleGridLocations;
 
     std::deque<glm::vec2> queue;
-    {   // Cast a ray into the scene and use the nearest grid location as the starting point of the search.
+    {   // Cast a bunch of rays into the scene and use the nearest grid location as the starting point of the search.
         glm::mat4 mNdcToGrid = glm::inverse(mViewProj * transform());
-        glm::vec3 near = MulUtil::mulh(mNdcToGrid, glm::vec3(0, 0, -1), 1);
-        glm::vec3 far = MulUtil::mulh(mNdcToGrid, glm::vec3(0, 0, 1), 1);
 
-        const float a = far.y / (far.y - near.y);
-        glm::vec3 intersection = a * near + (1 - a) * far;
-        glm::vec2 gridPoint = glm::round(glm::vec2(intersection.x, intersection.z));
-        queue.push_back(gridPoint);
-        for (auto & gridLocation : adjacentGridLocations(gridPoint)) {
-            queue.push_back(gridLocation);
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                glm::vec3 near = MulUtil::mulh(mNdcToGrid, glm::vec3(x, y, -1), 1);
+                glm::vec3 far = MulUtil::mulh(mNdcToGrid, glm::vec3(x, y, 1), 1);
+
+                const float a = far.y / (far.y - near.y);
+                glm::vec3 intersection = a * near + (1 - a) * far;
+                glm::vec2 gridPoint = glm::round(glm::vec2(intersection.x, intersection.z));
+                queue.push_back(gridPoint);
+            }
         }
     }
 

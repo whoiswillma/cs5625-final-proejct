@@ -29,6 +29,12 @@ enum TextureFilteringMode {
     TextureFilteringMode_Linear = 1
 };
 
+enum OceanShadingMode {
+    OceanShadingMode_Plastic,
+    OceanShadingMode_Tessendorf,
+    OceanShadingMode_Toon
+};
+
 struct PLAppConfig {
     glm::ivec2 shadowMapResolution = {1024, 1024};
     float shadowBias = 1e-2;
@@ -48,6 +54,7 @@ struct PLAppConfig {
     TextureFilteringMode textureFilteringMode = TextureFilteringMode_Linear;
 
     bool ocean = false;
+    OceanShadingMode oceanShadingMode = OceanShadingMode_Tessendorf;
     bool birds = false;
 };
 
@@ -71,6 +78,7 @@ public:
 private:
     struct NanoguiWindows {
         nanogui::Window* deferred;
+        nanogui::Window* ocean;
     } nanoguiWindows;
 
     void setUpNanoguiControls();

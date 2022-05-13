@@ -12,6 +12,7 @@
 #include "RTUtil/Sky.hpp"
 #include "GLWrap/Framebuffer.hpp"
 #include "MulUtil.hpp"
+#include "glm/gtx/transform.hpp"
 #include "Tessendorf.h"
 
 PLApp::PLApp(
@@ -285,7 +286,7 @@ void PLApp::setUpNanoguiControls() {
 
         auto sunTheta = gui->add_variable("Sun theta", config.thetaSun);
         sunTheta->set_spinnable(true);
-        sunTheta->set_min_max_values(0, 2 * glm::pi<float>());
+        sunTheta->set_min_max_values(0, glm::pi<float>() / 2);
 
         auto turb = gui->add_variable("Turbidity", config.turbidity);
         turb->set_spinnable(true);
@@ -300,6 +301,14 @@ void PLApp::setUpNanoguiControls() {
             config.textureFilteringMode = m;
             resetFramebuffers();
         });
+    }
+    {
+        perform_layout();
+        int x = nanoguiWindows.deferred->position().x() + nanoguiWindows.deferred->size().x() + 10;
+
+        nanoguiWindows.ocean = gui->add_window(nanogui::Vector2i(x, 10), "Ocean");
+        auto oceanShadingMode = gui->add_variable("Shading Mode", config.oceanShadingMode);
+        oceanShadingMode->set_items({"Plastic", "Tessendorf", "Toon"});
     }
 
     perform_layout();
@@ -353,9 +362,12 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
                 shadingMode = ShadingMode_Deferred;
                 std::cout << "Switched to deferred shading" << std::endl;
                 return true;
-            case GLFW_KEY_Q:
-                nanoguiWindows.deferred->set_visible(!nanoguiWindows.deferred->visible());
+            case GLFW_KEY_Q: {
+                bool visible = !nanoguiWindows.deferred->visible();
+                nanoguiWindows.deferred->set_visible(visible);
+                nanoguiWindows.ocean->set_visible(visible);
                 return true;
+            }
             case GLFW_KEY_SPACE:
                 timer.setPlaying(!timer.playing());
                 std::cout << "[ ] Set playback: " << (timer.playing() ? "playing" : "paused") << std::endl;
@@ -866,6 +878,7 @@ void PLApp::deferred_lighting_pass(
     prog->uniform("normalsTex", 2);
     prog->uniform("depthTex", 3);
     prog->uniform("shadowTex", 4);
+    prog->uniform("shadeOcean", config.oceanShadingMode == OceanShadingMode_Plastic);
 
     RTUtil::PerspectiveCamera lightCamera = get_light_camera(light);
     prog->uniform("mV_light", lightCamera.getViewMatrix());
@@ -912,6 +925,7 @@ void PLApp::deferred_ambient_pass(
     prog->uniform("materialTex", 1);
     prog->uniform("normalsTex", 2);
     prog->uniform("depthTex", 3);
+    prog->uniform("shadeOcean", config.oceanShadingMode == OceanShadingMode_Plastic);
 
     // Set uniforms in deferred_ambient.fs
     prog->uniform("ambientRadiance", light.radiance);
@@ -938,9 +952,6 @@ void PLApp::deferred_ocean_directional_pass(const std::shared_ptr<GLWrap::Frameb
     prog->uniform("materialTex", 1);
     prog->uniform("normalsTex", 2);
     prog->uniform("depthTex", 3);
-
-    // Set uniforms in deferred_ocean_directional.fs
-    prog->uniform("lightDirection", glm::normalize(glm::vec3(0, 1, 0)));
 
     // Bind uniforms in sunsky.fs
     RTUtil::Sky sky(config.thetaSun, config.turbidity);
@@ -1088,13 +1099,15 @@ void PLApp::draw_contents_deferred() {
         }
     }
 
-    accBuffer->bind();
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE);
-    glViewport(0, 0, getViewportSize().x, getViewportSize().y);
-    deferred_ocean_directional_pass(geomBuffer);
-    glDisable(GL_BLEND);
-    accBuffer->unbind();
+    if (config.ocean && config.oceanShadingMode == OceanShadingMode_Tessendorf) {
+        accBuffer->bind();
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE);
+        glViewport(0, 0, getViewportSize().x, getViewportSize().y);
+        deferred_ocean_directional_pass(geomBuffer);
+        glDisable(GL_BLEND);
+        accBuffer->unbind();
+    }
 
     if (config.sunskyEnabled) {
         // Use temp1 to hold the result of the sky pass

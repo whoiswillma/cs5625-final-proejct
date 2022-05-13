@@ -16,13 +16,10 @@ struct ShaderInput {
 ShaderInput getShaderInputs(vec2 texCoord);
 
 // Uniforms
-uniform vec3 upwelling = vec3(0.02, 0.07, 0.2);
+uniform vec3 upwelling = vec3(0.02, 0.03, 0.07);
 const float nSnell = 1.34;
 
 uniform mat4 mP;
-
-// Light Properties
-uniform vec3 lightDirection;
 
 // Inputs
 in vec2 geom_texCoord;
@@ -47,7 +44,6 @@ void main() {
     vPosition4 /= vPosition4.w;
     vec3 vPosition = vPosition4.xyz;
 
-    vec3 L = normalize(lightDirection);
     vec3 nN = normalize(inputs.normal);
     vec3 nI = normalize(vPosition);
 
@@ -66,7 +62,7 @@ void main() {
         reflectivity = 0.5 * (fs * fs + ts * ts);
     }
 
-    vec3 sky = sunskyRadiance(normalize(-nI - 2 * nN * dot(-nI, nN))) / 3.14;
+    vec3 sky = sunskyRadiance(normalize(-nI - 2 * nN * dot(-nI, nN)));
 
     vec3 fragColor3 = (reflectivity * sky + (1 - reflectivity) * upwelling);
     fragColor = vec4(fragColor3, 1);
