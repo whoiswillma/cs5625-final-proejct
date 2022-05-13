@@ -92,7 +92,7 @@ std::shared_ptr<RTUtil::PerspectiveCamera> importCamera(const aiScene* aiScene) 
         camera = std::make_shared<RTUtil::PerspectiveCamera>(
                 MulUtil::mulh(nodeToWorld, RTUtil::a2g(aiCamera->mPosition), 1),
                 MulUtil::mulh(nodeToWorld, RTUtil::a2g(aiCamera->mLookAt), 1),
-                MulUtil::mulh(nodeToWorld, RTUtil::a2g(aiCamera->mUp), 0),
+                glm::vec3(0, 1, 0),
                 aiCamera->mAspect,
                 aiCamera->mClipPlaneNear,
                 aiCamera->mClipPlaneFar,
