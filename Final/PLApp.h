@@ -42,6 +42,7 @@ struct PLAppConfig {
     int normalLineWidth = 2;
     float normalLineThreshold = 2.0f;
     bool fxaaEnabled = true;
+    bool rampEnabled = false;
     bool pcfEnabled = true;
     bool pointLightsEnabled = true;
     bool convertAreaToPoint = true;

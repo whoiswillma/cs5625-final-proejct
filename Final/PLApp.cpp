@@ -14,6 +14,9 @@
 #include "MulUtil.hpp"
 #include "Tessendorf.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 PLApp::PLApp(
         const std::shared_ptr<Scene> &scene,
         const std::shared_ptr<OceanScene> &oceanScene,
@@ -268,6 +271,9 @@ void PLApp::setUpNanoguiControls() {
     auto ssao = gui->add_variable("SSAO Samples", config.ssaoNumSamples);
     ssao->set_spinnable(true);
     ssao->set_min_max_values(0, 100);
+
+    gui->add_group("Toon");
+    gui->add_variable("Ramp", config.rampEnabled);
 
     gui->add_group("Outline");
     gui->add_variable("FXAA", config.fxaaEnabled);
@@ -775,6 +781,9 @@ void PLApp::toon_lighting_pass(
     const PointLight& light,
     const glm::vec3 ambient
 ) {
+    GLWrap::Texture2D* ramp = new GLWrap::Texture2D(
+        "../resources/ramps/ramp2.png", false, false);
+    ramp->bindToTextureUnit(5);
     geomBuffer->colorTexture(0).bindToTextureUnit(0);
     geomBuffer->colorTexture(1).bindToTextureUnit(1);
     geomBuffer->colorTexture(2).bindToTextureUnit(2);
@@ -792,6 +801,7 @@ void PLApp::toon_lighting_pass(
     prog->uniform("normalsTex", 2);
     prog->uniform("depthTex", 3);
     prog->uniform("shadowTex", 4);
+    prog->uniform("ramp", 5);
 
     RTUtil::PerspectiveCamera lightCamera = get_light_camera(light);
     prog->uniform("mV_light", lightCamera.getViewMatrix());
@@ -802,6 +812,7 @@ void PLApp::toon_lighting_pass(
             1
     ));
     prog->uniform("ambient", ambient);
+    prog->uniform("rampEnabled", config.rampEnabled);
 
     prog->uniform("wCamPos", cam->getEye());
     prog->uniform("specularThreshold", 0.95f);

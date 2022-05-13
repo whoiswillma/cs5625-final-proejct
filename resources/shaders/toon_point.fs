@@ -22,6 +22,10 @@ uniform float specularSmoothness;
 uniform float edgeThreshold;
 uniform float edgeIntensity;
 
+// Ramp Properties
+uniform sampler2D ramp;
+uniform bool rampEnabled;
+
 // Inputs
 in vec2 geom_texCoord;
 
@@ -68,13 +72,17 @@ void main() {
             vec3 wLightDir = wLightPos - wPosition4.xyz;
 
             float intensity = dot(normalize(wLightDir), inputs.normal) * 0.5 + 0.5;
-            if (intensity < 0.5) {
-                fragColor.xyz += 0.25 * inputs.diffuseReflectance;
-            } else if (intensity < 0.75){
-                fragColor.xyz += 0.5 * inputs.diffuseReflectance;
+            if (rampEnabled) {
+                fragColor.xyz += texture(ramp, vec2(intensity, 0.5)).r * inputs.diffuseReflectance;
             } else {
-                fragColor.xyz += inputs.diffuseReflectance;
-            }
+                if (intensity < 0.5) {
+                    fragColor.xyz += 0.25 * inputs.diffuseReflectance;
+                } else if (intensity < 0.75){
+                    fragColor.xyz += 0.5 * inputs.diffuseReflectance;
+                } else {
+                    fragColor.xyz += inputs.diffuseReflectance;
+                }
+            }            
 
             vec3 wCamDir = wCamPos - wPosition4.xyz;
             vec3 wHalfDir = normalize(wLightDir + wCamDir);
