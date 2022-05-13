@@ -182,7 +182,7 @@ private:
     void add_birds(std::shared_ptr<Node> curr_node);
     void speed_up_birds();
     void slow_down_birds();
-    void animate_birds();
+    void animate_birds(double time);
     std::vector<Bird> birds;
 };
 

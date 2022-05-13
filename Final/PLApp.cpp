@@ -1111,7 +1111,7 @@ void PLApp::slow_down_birds() {
     }
 }
 
-void PLApp::animate_birds() {
+void PLApp::animate_birds(double time) {
     /* returns the vector we need to add to the position of the current boid to move it
      * 1% of the way to the center of mass of its neighbors
      */
@@ -1174,6 +1174,7 @@ void PLApp::animate_birds() {
         return glm::normalize(scatterVector) * scatterFactor;
     };
 
+    glm::vec3 currWind = Bird::wind.get_wind_dir(time);
     for (size_t currBoid = 0; currBoid < this->birds.size(); currBoid++) {
         glm::vec3 deltaV = center_of_mass(currBoid) +
                            course_correction(currBoid)  +
@@ -1181,6 +1182,7 @@ void PLApp::animate_birds() {
         if (PLApp::scatter) {
             deltaV += calc_scatter(currBoid);
         }
+        deltaV += currWind / 100.f;
         deltaV.y = 0;
         this->birds[currBoid].velocity += deltaV;
         this->birds[currBoid].position += this->birds[currBoid].velocity;
@@ -1194,7 +1196,7 @@ void PLApp::draw_contents() {
 
     scene->animate(timer.time());
     if (config.birds && timer.playing()) {
-        animate_birds();
+        animate_birds(timer.time());
     }
 
     switch (shadingMode) {
