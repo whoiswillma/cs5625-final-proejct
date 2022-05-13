@@ -336,7 +336,7 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
                 return true;
             case GLFW_KEY_PERIOD:
                 timer.offset(0.01);
-                //std::cout << "[>] Skip forward: 0.01s" << std::endl;
+                std::cout << "[>] Skip forward: 0.01s" << std::endl;
                 return true;
             case GLFW_KEY_RIGHT:
                 timer.offset(0.1);
@@ -792,6 +792,10 @@ void PLApp::deferred_ocean_directional_pass(const std::shared_ptr<GLWrap::Frameb
     RTUtil::Sky sky(config.thetaSun, config.turbidity);
     sky.setUniforms(*prog);
 
+    // Bind uniforms in deferred_ocean_directional.fs
+    prog->uniform("mV", cam->getViewMatrix());
+    prog->uniform("upwelling", oceanScene->upwelling);
+
     fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
     prog->unuse();
 }
@@ -812,6 +816,12 @@ void PLApp::deferred_sky_pass(
     prog->uniform("image", 0);
     prog->uniform("mP", cam->getProjectionMatrix());
     prog->uniform("mV", cam->getViewMatrix());
+
+    if (config.ocean) {
+        prog->uniform("background", oceanScene->upwelling);
+    } else {
+        prog->uniform("background", glm::vec3(0, 0, 0));
+    }
 
     fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
     prog->unuse();

@@ -27,6 +27,7 @@ struct OceanScene {
 
     const glm::ivec2 gridSize;
     const glm::vec2 sizeMeters;
+    const glm::vec3 upwelling;
 
     OceanScene(glm::vec2 sizeMeters, glm::ivec2 gridSize);
 

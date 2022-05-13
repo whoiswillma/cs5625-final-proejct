@@ -6,7 +6,6 @@
 #include "OceanScene.h"
 #include "glm/glm.hpp"
 #include "MulUtil.hpp"
-#include "RTUtil/output.hpp"
 #include <unordered_set>
 
 OceanMesh::OceanMesh(int n, int m) {
@@ -52,7 +51,8 @@ OceanScene::OceanScene(glm::vec2 sizeMeters, glm::ivec2 gridSize) :
 		12.0f,
 		glm::normalize(glm::vec2(1.0, 0.2)),
 		3.0f
-		}) {
+    }),
+    upwelling(0.02, 0.03, 0.07) {
 }
 
 glm::mat4 OceanScene::transform(glm::vec2 gridLocation) const {
