@@ -93,6 +93,7 @@ private:
 
     std::shared_ptr<GLWrap::Program> programFlat;
     std::shared_ptr<GLWrap::Program> programForward;
+	std::shared_ptr<GLWrap::Program> programTextureDeferred;
     std::shared_ptr<GLWrap::Program> programDeferredGeom;
     std::shared_ptr<GLWrap::Program> programDeferredShadow;
     std::shared_ptr<GLWrap::Program> programDeferredPoint;
@@ -121,6 +122,9 @@ private:
     // size = shadow map resolution, color attachments = 0, depth attachment = yes
     std::shared_ptr<GLWrap::Framebuffer> shadowMap;
 
+	// texturmap for seagulls
+	std::shared_ptr<GLWrap::Texture2D> texturemap;
+
     nanogui::Color backgroundColor;
     PLAppConfig config;
 
@@ -141,6 +145,7 @@ private:
     glm::ivec2 getViewportSize();
 
     void deferred_geometry_pass();
+	void deferred_texture_pass();
     void deferred_ocean_geometry_pass();
     void draw_contents_deferred();
     void deferred_draw_pass(const std::shared_ptr<GLWrap::Framebuffer>& accBuffer);
@@ -194,5 +199,4 @@ private:
 
     void update_ocean_textures(double time);
 };
-
 #endif //CS5625_PLAPP_H

@@ -114,6 +114,11 @@ void PLApp::setUpPrograms() {
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_point.fs"}
     }));
 
+	programTextureDeferred = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred Texture pass", {
+		{GL_VERTEX_SHADER,   resourcePath + "shaders/deferred_texture.vs"},
+		{GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_geom_texture.fs"}
+		}));
+
     programDeferredAmbient = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred ambient light pass", {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shader_inputs.fs"},
@@ -178,6 +183,8 @@ void PLApp::setUpMeshes() {
         glWrapMesh->setAttribute(1, mesh.normals);
         glWrapMesh->setAttribute(2, mesh.boneIndices);
         glWrapMesh->setAttribute(3, mesh.boneWeights);
+		glWrapMesh->setAttribute(4, mesh.uvcoordinates);
+
         glWrapMesh->setIndices(mesh.indices, GL_TRIANGLES);
 
         meshes.push_back(std::move(glWrapMesh));
@@ -575,6 +582,56 @@ void PLApp::draw_contents_forward() {
 /*****************************************************************************
  * DEFERRED SHADING                                                          *
  *****************************************************************************/
+void PLApp::deferred_texture_pass() {
+	std::shared_ptr<GLWrap::Program> prog = programTextureDeferred;
+	prog->use();
+
+	prog->uniform("mV", cam->getViewMatrix());
+	prog->uniform("mP", cam->getProjectionMatrix());
+
+	//stbi_image_free(textureData);
+	std::string path = "../resources/scenes/bsptD.jpg";
+	texturemap = std::make_shared<GLWrap::Texture2D>(path, true, true);
+	//texturemap->generateMipmap();
+	texturemap->bindToTextureUnit(0);
+	// Perform a depth-first traversal of the scene graph and draw all the nodes.
+	std::vector<std::shared_ptr<Node>> nodes = { scene->root };
+	while (!nodes.empty()) {
+		std::shared_ptr<Node> node = nodes.back();
+		nodes.pop_back();
+
+		for (const std::shared_ptr<Node> &child : node->children) {
+			nodes.push_back(child);
+		}
+
+		prog->uniform("mM", node->getTransformTo(nullptr));
+
+		for (unsigned int i : node->meshIndices) {
+			Mesh mesh = scene->meshes[i];
+			Material material = scene->materials[mesh.materialIndex];
+			prog->uniform("alpha", material.roughnessFactor);
+			prog->uniform("eta", 1.5f);
+			prog->uniform("diffuseReflectance", material.color);
+			prog->uniform("image", 0);
+			prog->uniform("useBones", !mesh.bones.empty());
+			if (!mesh.bones.empty()) {
+				for (int j = 0; j < mesh.bones.size(); j++) {
+					auto bone = mesh.bones[j];
+					std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+					glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
+
+					prog->uniform(
+						"boneTransforms[" + std::to_string(j) + "]",
+						boneTransform
+					);
+				}
+			}
+
+			meshes[i]->drawElements();
+		}
+	}
+	prog->unuse();
+}
 
 void PLApp::deferred_geometry_pass() {
     std::shared_ptr<GLWrap::Program> prog = programDeferredGeom;
@@ -1025,7 +1082,8 @@ void PLApp::draw_contents_deferred() {
             GL_COLOR_ATTACHMENT2,
     };
     glDrawBuffers(3, buffers);
-    deferred_geometry_pass();
+    deferred_texture_pass();
+	//deferred_geometry_pass();
     if (config.ocean) {
         deferred_ocean_geometry_pass();
     }

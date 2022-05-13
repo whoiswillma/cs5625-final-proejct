@@ -50,6 +50,7 @@ struct Node {
 struct Mesh {
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec3> normals;
+	std::vector<glm::vec3> uvcoordinates;
     std::vector<uint32_t> indices;
     uint32_t materialIndex;
 
@@ -84,5 +85,4 @@ struct Scene {
     std::map<std::string, std::shared_ptr<Node>> nameToNode;
     void animate(double time, unsigned int animationIdx = 0);
 };
-
 #endif //CS5625_SCENE_H

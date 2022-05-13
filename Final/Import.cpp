@@ -21,6 +21,13 @@ Mesh importMesh(aiMesh* aiMesh) {
     for (int i = 0; i < aiMesh->mNumVertices; i++) {
         m.vertices.push_back(RTUtil::a2g(aiMesh->mVertices[i]));
         m.normals.push_back(RTUtil::a2g(aiMesh->mNormals[i]));
+		if (aiMesh->mBones != 0) {
+			m.uvcoordinates.push_back(glm::vec3(aiMesh->mTextureCoords[0][i].x, aiMesh->mTextureCoords[0][i].y, aiMesh->mTextureCoords[0][i].z));
+		}
+		else {
+			m.uvcoordinates.push_back(glm::vec3(-1, -1, -1));
+		}
+		
         m.boneIndices.emplace_back(-1, -1, -1, -1);
         m.boneWeights.emplace_back(0, 0, 0, 0);
     }
@@ -303,3 +310,5 @@ std::shared_ptr<Scene> importScene(const aiScene* aiScene) {
     dumpNodeHierarchy(scene->root, 0);
     return scene;
 }
+
+
