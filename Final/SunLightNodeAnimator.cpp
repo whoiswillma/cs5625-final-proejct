@@ -13,5 +13,4 @@ SunLightNodeAnimator::SunLightNodeAnimator(std::shared_ptr<Node> sunLightNode) :
 
 void SunLightNodeAnimator::update(float thetaSun) {
     node->transform = glm::rotate(thetaSun, glm::vec3(0, 0, 1));
-    std::cout << node->transform << std::endl;
 }

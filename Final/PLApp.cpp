@@ -263,6 +263,7 @@ void PLApp::setUpNanoguiControls() {
         auto sunTheta = gui->add_variable("Sun theta", config.thetaSun);
         sunTheta->set_spinnable(true);
         sunTheta->set_min_max_values(0, glm::pi<float>() / 2);
+        sunTheta->set_value_increment(0.01);
 
         auto turb = gui->add_variable("Turbidity", config.turbidity);
         turb->set_spinnable(true);
@@ -289,7 +290,7 @@ void PLApp::setUpNanoguiControls() {
         auto renderDist = gui->add_variable("Render Distance", config.renderDistance);
         renderDist->set_min_max_values(10, 200);
         renderDist->set_spinnable(true);
-        renderDist->set_value_increment(5);
+        renderDist->set_value_increment(1);
     }
 
     perform_layout();
