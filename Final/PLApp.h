@@ -69,6 +69,10 @@ public:
     virtual void draw_contents() override;
 
 private:
+    struct NanoguiWindows {
+        nanogui::Window* deferred;
+    } nanoguiWindows;
+
     void setUpNanoguiControls();
     void setUpMeshes();
     void setUpCamera();

@@ -219,79 +219,81 @@ void PLApp::setUpMeshes() {
 
 void PLApp::setUpNanoguiControls() {
     auto *gui = new nanogui::FormHelper(this);
-    gui->add_window(nanogui::Vector2i(10, 10), "Controls");
+    {
+        nanoguiWindows.deferred = gui->add_window(nanogui::Vector2i(10, 10), "Controls");
 
-    gui->add_group("Image");
-    gui->add_variable("Exposure", config.exposure)->set_spinnable(true);
+        gui->add_group("Image");
+        gui->add_variable("Exposure", config.exposure)->set_spinnable(true);
 
-    auto pointGroup = gui->add_group("Point");
-    gui->add_variable("Enabled", config.pointLightsEnabled);
+        auto pointGroup = gui->add_group("Point");
+        gui->add_variable("Enabled", config.pointLightsEnabled);
 
-    gui->add_variable("Convert area to point", config.convertAreaToPoint);
+        gui->add_variable("Convert area to point", config.convertAreaToPoint);
 
-    auto resolutionX = gui->add_variable("Resolution X", config.shadowMapResolution.x);
-    resolutionX->set_spinnable(true);
-    resolutionX->set_min_max_values(1, 10000);
-    resolutionX->set_value_increment(1000);
-    resolutionX->set_callback([&](int x) {
-        config.shadowMapResolution.x = x;
-        resetFramebuffers();
-    });
+        auto resolutionX = gui->add_variable("Resolution X", config.shadowMapResolution.x);
+        resolutionX->set_spinnable(true);
+        resolutionX->set_min_max_values(1, 10000);
+        resolutionX->set_value_increment(1000);
+        resolutionX->set_callback([&](int x) {
+            config.shadowMapResolution.x = x;
+            resetFramebuffers();
+        });
 
-    auto resolutionY = gui->add_variable("Resolution Y", config.shadowMapResolution.y);
-    resolutionY->set_spinnable(true);
-    resolutionY->set_min_max_values(1, 10000);
-    resolutionY->set_value_increment(1000);
-    resolutionY->set_callback([&](int y) {
-        config.shadowMapResolution.y = y;
-        resetFramebuffers();
-    });
+        auto resolutionY = gui->add_variable("Resolution Y", config.shadowMapResolution.y);
+        resolutionY->set_spinnable(true);
+        resolutionY->set_min_max_values(1, 10000);
+        resolutionY->set_value_increment(1000);
+        resolutionY->set_callback([&](int y) {
+            config.shadowMapResolution.y = y;
+            resetFramebuffers();
+        });
 
-    auto bias = gui->add_variable("Bias", config.shadowBias);
-    bias->set_spinnable(true);
-    bias->set_min_max_values(1e-5, 1);
+        auto bias = gui->add_variable("Bias", config.shadowBias);
+        bias->set_spinnable(true);
+        bias->set_min_max_values(1e-5, 1);
 
-    auto nearr = gui->add_variable("Near", config.shadowNear);
-    nearr->set_spinnable(true);
-    nearr->set_min_max_values(1e-5, 1000);
+        auto nearr = gui->add_variable("Near", config.shadowNear);
+        nearr->set_spinnable(true);
+        nearr->set_min_max_values(1e-5, 1000);
 
-    auto farr = gui->add_variable("Far", config.shadowFar);
-    farr->set_spinnable(true);
-    farr->set_min_max_values(1e-5, 1000);
+        auto farr = gui->add_variable("Far", config.shadowFar);
+        farr->set_spinnable(true);
+        farr->set_min_max_values(1e-5, 1000);
 
-    auto fov = gui->add_variable("Fov", config.shadowFov);
-    fov->set_spinnable(true);
-    fov->set_min_max_values(1e-5, glm::pi<float>());
+        auto fov = gui->add_variable("Fov", config.shadowFov);
+        fov->set_spinnable(true);
+        fov->set_min_max_values(1e-5, glm::pi<float>());
 
-    gui->add_variable("PCF", config.pcfEnabled);
+        gui->add_variable("PCF", config.pcfEnabled);
 
-    gui->add_group("Ambient");
-    gui->add_variable("Enabled", config.ambientLightsEnabled);
+        gui->add_group("Ambient");
+        gui->add_variable("Enabled", config.ambientLightsEnabled);
 
-    auto ssao = gui->add_variable("SSAO Samples", config.ssaoNumSamples);
-    ssao->set_spinnable(true);
-    ssao->set_min_max_values(0, 100);
+        auto ssao = gui->add_variable("SSAO Samples", config.ssaoNumSamples);
+        ssao->set_spinnable(true);
+        ssao->set_min_max_values(0, 100);
 
-    gui->add_group("Sunsky");
-    gui->add_variable("Enabled", config.sunskyEnabled);
+        gui->add_group("Sunsky");
+        gui->add_variable("Enabled", config.sunskyEnabled);
 
-    auto sunTheta = gui->add_variable("Sun theta", config.thetaSun);
-    sunTheta->set_spinnable(true);
-    sunTheta->set_min_max_values(0, 2 * glm::pi<float>());
+        auto sunTheta = gui->add_variable("Sun theta", config.thetaSun);
+        sunTheta->set_spinnable(true);
+        sunTheta->set_min_max_values(0, 2 * glm::pi<float>());
 
-    auto turb = gui->add_variable("Turbidity", config.turbidity);
-    turb->set_spinnable(true);
-    turb->set_min_max_values(1, 10);
+        auto turb = gui->add_variable("Turbidity", config.turbidity);
+        turb->set_spinnable(true);
+        turb->set_min_max_values(1, 10);
 
-    gui->add_group("Bloom");
-    gui->add_variable("Enabled", config.bloomFilterEnabled);
+        gui->add_group("Bloom");
+        gui->add_variable("Enabled", config.bloomFilterEnabled);
 
-    auto filtMode = gui->add_variable("Filtering Mode", config.textureFilteringMode);
-    filtMode->set_items({"Nearest", "Linear"});
-    filtMode->set_callback([&](const TextureFilteringMode &m) {
-        config.textureFilteringMode = m;
-        resetFramebuffers();
-    });
+        auto filtMode = gui->add_variable("Filtering Mode", config.textureFilteringMode);
+        filtMode->set_items({"Nearest", "Linear"});
+        filtMode->set_callback([&](const TextureFilteringMode &m) {
+            config.textureFilteringMode = m;
+            resetFramebuffers();
+        });
+    }
 
     perform_layout();
 }
@@ -343,6 +345,9 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
             case GLFW_KEY_3:
                 shadingMode = ShadingMode_Deferred;
                 std::cout << "Switched to deferred shading" << std::endl;
+                return true;
+            case GLFW_KEY_Q:
+                nanoguiWindows.deferred->set_visible(!nanoguiWindows.deferred->visible());
                 return true;
             case GLFW_KEY_SPACE:
                 timer.setPlaying(!timer.playing());
