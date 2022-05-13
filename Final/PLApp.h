@@ -183,13 +183,6 @@ private:
     Animators animators;
 
     void update_ocean_textures(double time);
-
-    static bool scatter;
-    void add_birds(std::shared_ptr<Node> curr_node);
-    void speed_up_birds();
-    void slow_down_birds();
-    void animate_birds(double time);
-    std::vector<Bird> birds;
 };
 
 #endif //CS5625_PLAPP_H
