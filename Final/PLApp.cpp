@@ -562,7 +562,7 @@ void PLApp::deferred_texture_pass() {
 
 	//stbi_image_free(textureData);
 	std::string path = "../resources/scenes/bsptD.jpg";
-	texturemap = std::make_shared<GLWrap::Texture2D> (path, true,false);
+	texturemap = std::make_shared<GLWrap::Texture2D> (path, true,true);
 	//texturemap->generateMipmap();
 	texturemap->bindToTextureUnit(1);
 	// Perform a depth-first traversal of the scene graph and draw all the nodes.
@@ -976,7 +976,7 @@ void PLApp::draw_contents_deferred() {
     };
     glDrawBuffers(3, buffers);
     deferred_texture_pass();
-    if (false) {
+    if (config.ocean) {
         deferred_ocean_geometry_pass();
     }
     geomBuffer->unbind();
