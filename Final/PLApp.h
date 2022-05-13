@@ -141,7 +141,8 @@ private:
     void toon_lighting_pass(
             const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
             const GLWrap::Texture2D& shadowTexture,
-            const PointLight& light
+            const PointLight& light,
+            const glm::vec3 ambient
     );
     void toon_outline_pass(
             const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,

@@ -772,7 +772,8 @@ glm::ivec2 PLApp::getViewportSize() {
 void PLApp::toon_lighting_pass(
     const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
     const GLWrap::Texture2D& shadowTexture,
-    const PointLight& light
+    const PointLight& light,
+    const glm::vec3 ambient
 ) {
     geomBuffer->colorTexture(0).bindToTextureUnit(0);
     geomBuffer->colorTexture(1).bindToTextureUnit(1);
@@ -795,16 +796,18 @@ void PLApp::toon_lighting_pass(
     RTUtil::PerspectiveCamera lightCamera = get_light_camera(light);
     prog->uniform("mV_light", lightCamera.getViewMatrix());
     prog->uniform("mP_light", lightCamera.getProjectionMatrix());
-    prog->uniform("vLightPos", MulUtil::mulh(
-            cam->getViewMatrix() * light.nodeToWorld,
+    prog->uniform("wLightPos", MulUtil::mulh(
+            light.nodeToWorld,
             light.position,
             1
     ));
-    prog->uniform("vCamPos", cam->getEye());
-    prog->uniform("specularThreshold", 0.6f);
-    prog->uniform("specularIntensity", 3.0f);
-    prog->uniform("specularSmoothness", 0.0f);
-    prog->uniform("edgeThreshold", 0.5f);
+    prog->uniform("ambient", ambient);
+
+    prog->uniform("wCamPos", cam->getEye());
+    prog->uniform("specularThreshold", 0.95f);
+    prog->uniform("specularIntensity", 1.0f);
+    prog->uniform("specularSmoothness", 0.5f);
+    prog->uniform("edgeThreshold", 0.6f);
     prog->uniform("edgeIntensity", 3.0f);
 
     fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -1038,7 +1041,14 @@ void PLApp::draw_contents_deferred() {
             glEnable(GL_BLEND);
             glBlendFunc(GL_ONE, GL_ONE);
             glViewport(0, 0, getViewportSize().x, getViewportSize().y);
-            toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light);
+            if (int(scene->ambientLights.size()) > 0) {
+                toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light, 
+                    scene->ambientLights[0].radiance);
+            }
+            else {
+                toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light,
+                    glm::vec3(0));
+            }
             glDisable(GL_BLEND);
             accBuffer->unbind();
             break;
