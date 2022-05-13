@@ -9,10 +9,12 @@
 uniform float alpha;
 uniform float eta;
 uniform vec3 diffuseReflectance;
+uniform sampler2D image;
 
 // Inputs
 in vec3 vPosition;
 in vec3 vNormal;
+in vec2 texcoordinates;
 
 // Outputs
 layout (location = 0) out vec4 outDiffuseReflectance;
@@ -21,8 +23,7 @@ layout (location = 2) out vec4 outNormal;
 
 void main() {
     vec3 normal = normalize((gl_FrontFacing) ? vNormal : -vNormal);
-
-    outDiffuseReflectance = vec4(diffuseReflectance, 1);
+    outDiffuseReflectance = texture(image, texcoordinates);
     outMaterial = vec4(eta / 10, alpha, 0, 1);
     outNormal = vec4(normal / 2 + 0.5, 1);
 }

@@ -112,6 +112,8 @@ private:
     // size = shadow map resolution, color attachments = 0, depth attachment = yes
     std::shared_ptr<GLWrap::Framebuffer> shadowMap;
 
+	std::shared_ptr<GLWrap::Texture2D> texturemap;
+
     nanogui::Color backgroundColor;
     PLAppConfig config;
 

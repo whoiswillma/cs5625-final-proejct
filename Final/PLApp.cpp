@@ -54,29 +54,6 @@ PLApp::PLApp(
     set_visible(true);
 }
 
-//void PLApp::load_texture(const char* filename) {
-//
-//	unsigned int texture;
-//	glGenTextures(1, &texture);
-//	glBindTexture(GL_TEXTURE_2D, texture);
-//	// set the texture wrapping/filtering options (on the currently bound texture object)
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//	// load and generate the texture
-//	this->textureData = stbi_load(filename, &texture_width, &texture_height, &texture_Channels, 0);
-//	if (textureData)
-//	{
-//		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture_width, texture_height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
-//		glGenerateMipmap(GL_TEXTURE_2D);
-//	}
-//	else
-//	{
-//		std::cout << "Failed to load texture" << std::endl;
-//	}
-//	stbi_image_free(textureData);
-//}
 void PLApp::add_birds(std::shared_ptr<Node> curr_node) {
     if (Bird::is_bird(curr_node->name)) {
         this->birds.push_back(Bird(curr_node));
@@ -583,27 +560,11 @@ void PLApp::deferred_texture_pass() {
 	prog->uniform("mV", cam->getViewMatrix());
 	prog->uniform("mP", cam->getProjectionMatrix());
 
-	unsigned int texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	// set the texture wrapping/filtering options (on the currently bound texture object)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	// load and generate the texture
-	this->textureData = stbi_load("../resources/scenes/bsptD.jpg", &texture_width, &texture_height, &texture_Channels, 0);
-	if (textureData)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture_width, texture_height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
-	}
 	//stbi_image_free(textureData);
-
+	std::string path = "../resources/scenes/bsptD.jpg";
+	texturemap = std::make_shared<GLWrap::Texture2D> (path, true,false);
+	//texturemap->generateMipmap();
+	texturemap->bindToTextureUnit(1);
 	// Perform a depth-first traversal of the scene graph and draw all the nodes.
 	std::vector<std::shared_ptr<Node>> nodes = { scene->root };
 	while (!nodes.empty()) {
@@ -622,7 +583,7 @@ void PLApp::deferred_texture_pass() {
 			prog->uniform("alpha", material.roughnessFactor);
 			prog->uniform("eta", 1.5f);
 			prog->uniform("diffuseReflectance", material.color);
-
+			prog->uniform("image", 1);
 			prog->uniform("useBones", !mesh.bones.empty());
 			if (!mesh.bones.empty()) {
 				for (int j = 0; j < mesh.bones.size(); j++) {
@@ -640,7 +601,6 @@ void PLApp::deferred_texture_pass() {
 			meshes[i]->drawElements();
 		}
 	}
-
 	prog->unuse();
 }
 
@@ -1015,8 +975,8 @@ void PLApp::draw_contents_deferred() {
             GL_COLOR_ATTACHMENT2,
     };
     glDrawBuffers(3, buffers);
-    deferred_geometry_pass();
-    if (config.ocean) {
+    deferred_texture_pass();
+    if (false) {
         deferred_ocean_geometry_pass();
     }
     geomBuffer->unbind();
