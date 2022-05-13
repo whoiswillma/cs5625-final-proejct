@@ -9,6 +9,7 @@ uniform mat4 mV;
 uniform mat4 mP;
 uniform vec2 shadowMapRes;
 uniform bool pcfEnabled;
+uniform bool shadeOcean = false;
 
 // Light Properties
 uniform vec3 vLightPos; // light position in view space
@@ -30,6 +31,7 @@ float isotropicMicrofacet(vec3 i, vec3 o, vec3 n, float eta, float alpha);
 // HEADERS: deferred_shader_inputs.fs
 struct ShaderInput {
     bool foreground;
+    bool ocean;
     vec3 diffuseReflectance;
     vec3 normal;
     float eta;
@@ -56,7 +58,7 @@ float percentCloserFiltering(vec2 shadowTexCoords, float shadowFragDepth) {
 
 void main() {
     ShaderInput inputs = getShaderInputs(geom_texCoord);
-    if (!inputs.foreground) {
+    if (!inputs.foreground || (!shadeOcean && inputs.ocean)) {
         fragColor = vec4(0, 0, 0, 0);
         return;
     }

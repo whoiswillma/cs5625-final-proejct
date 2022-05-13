@@ -96,6 +96,7 @@ private:
     std::shared_ptr<GLWrap::Program> programOceanForward;
     std::shared_ptr<GLWrap::Program> programOceanDeferredGeom;
     std::shared_ptr<GLWrap::Program> programOceanDeferredShadow;
+    std::shared_ptr<GLWrap::Program> programOceanDeferredDirectional;
 
     std::vector<std::shared_ptr<GLWrap::Mesh>> meshes;
     std::shared_ptr<GLWrap::Mesh> fsqMesh;
@@ -146,6 +147,7 @@ private:
             const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer,
             const AmbientLight &light
     );
+    void deferred_ocean_directional_pass(const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer);
     void deferred_sky_pass(const GLWrap::Texture2D &image);
     void deferred_blur_pass(
             const GLWrap::Texture2D& image,

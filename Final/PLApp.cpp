@@ -165,6 +165,13 @@ void PLApp::setUpPrograms() {
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shadow.fs"}
     }));
 
+    programOceanDeferredDirectional = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("ocean deferred directional pass", {
+            {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shader_inputs.fs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/sunsky.fs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_ocean_directional.fs"}
+    }));
+
     programSrgb = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("srgb", {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/srgb.fs"}
@@ -708,6 +715,7 @@ void PLApp::deferred_ocean_geometry_pass() {
 
     prog->uniform("mV", cam->getViewMatrix());
     prog->uniform("mP", cam->getProjectionMatrix());
+    prog->uniform("isOcean", true);
 
     prog->uniform("alpha", 0.5f);
     prog->uniform("eta", 1.5f);
@@ -914,6 +922,34 @@ void PLApp::deferred_ambient_pass(
     prog->unuse();
 }
 
+void PLApp::deferred_ocean_directional_pass(const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer) {
+    geomBuffer->colorTexture(0).bindToTextureUnit(0);
+    geomBuffer->colorTexture(1).bindToTextureUnit(1);
+    geomBuffer->colorTexture(2).bindToTextureUnit(2);
+    geomBuffer->depthTexture().bindToTextureUnit(3);
+
+    std::shared_ptr<GLWrap::Program> prog = programOceanDeferredDirectional;
+    prog->use();
+
+    // Set uniforms in deferred_shader_inputs.fs
+    prog->uniform("mP", cam->getProjectionMatrix());
+    prog->uniform("viewportSize", getViewportSize());
+    prog->uniform("diffuseReflectanceTex", 0);
+    prog->uniform("materialTex", 1);
+    prog->uniform("normalsTex", 2);
+    prog->uniform("depthTex", 3);
+
+    // Set uniforms in deferred_ocean_directional.fs
+    prog->uniform("lightDirection", glm::normalize(glm::vec3(0, 1, 0)));
+
+    // Bind uniforms in sunsky.fs
+    RTUtil::Sky sky(config.thetaSun, config.turbidity);
+    sky.setUniforms(*prog);
+
+    fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
+    prog->unuse();
+}
+
 void PLApp::deferred_sky_pass(
         const GLWrap::Texture2D &image
 ) {
@@ -1051,6 +1087,14 @@ void PLApp::draw_contents_deferred() {
             accBuffer->unbind();
         }
     }
+
+    accBuffer->bind();
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+    glViewport(0, 0, getViewportSize().x, getViewportSize().y);
+    deferred_ocean_directional_pass(geomBuffer);
+    glDisable(GL_BLEND);
+    accBuffer->unbind();
 
     if (config.sunskyEnabled) {
         // Use temp1 to hold the result of the sky pass

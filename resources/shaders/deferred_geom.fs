@@ -9,6 +9,7 @@
 uniform float alpha;
 uniform float eta;
 uniform vec3 diffuseReflectance;
+uniform bool isOcean = false;
 
 // Inputs
 in vec3 vPosition;
@@ -23,6 +24,6 @@ void main() {
     vec3 normal = normalize((gl_FrontFacing) ? vNormal : -vNormal);
 
     outDiffuseReflectance = vec4(diffuseReflectance, 1);
-    outMaterial = vec4(eta / 10, alpha, 0, 1);
+    outMaterial = vec4(eta / 10, alpha, isOcean ? 1 : 0, 1);
     outNormal = vec4(normal / 2 + 0.5, 1);
 }
