@@ -7,4 +7,5 @@ debug_build/
 
 .idea
 cmake-build-debug
+cmake-build-release
 
