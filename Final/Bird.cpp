@@ -7,6 +7,7 @@
 
 const double bound = 10.0;
 const float randomVelocity = 0.25;
+Wind Bird::wind;
 std::vector<Wall> Bird::walls {
         Wall{ glm::vec3 {  bound, bound,  0 }, glm::normalize(glm::vec3{  -bound, 0,  0 }) },
         Wall{ glm::vec3 { -bound, bound,  0 }, glm::normalize(glm::vec3{   bound, 0,  0 }) },
