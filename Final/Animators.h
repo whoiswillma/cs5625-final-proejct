@@ -8,6 +8,8 @@
 #include "Scene.h"
 #include "BoatNodeAnimator.h"
 #include "BirdNodeAnimator.h"
+#include "OceanAnimator.h"
+#include "OceanScene.h"
 #include <memory>
 
 // TODO: refactor lbs animation into a LbsNodeAnimator, and add it here
@@ -18,8 +20,9 @@ class Animators {
 public:
     std::vector<BoatNodeAnimator> boatAnimators;
     BirdNodeAnimator birdAnimator;
+    OceanAnimator oceanAnimator;
 
-    explicit Animators(const std::shared_ptr<Scene>& scene);
+    explicit Animators(const std::shared_ptr<Scene>& scene, const std::shared_ptr<OceanScene>& oceanScene);
 };
 
 

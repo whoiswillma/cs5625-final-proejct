@@ -28,16 +28,7 @@ PLApp::PLApp(
     oceanScene(oceanScene),
     shadingMode(ShadingMode_Deferred),
     config(config),
-    oceanBuffers({
-         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
-         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
-         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
-         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
-         tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
-         tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
-         tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
-    }),
-    animators(scene) {
+    animators(scene, oceanScene) {
 
     resetFramebuffers();
     setUpPrograms();
@@ -301,29 +292,6 @@ void PLApp::setUpNanoguiControls() {
 }
 
 void PLApp::setUpTextures() {
-    oceanTextures.displacementTexture = std::make_shared<GLWrap::Texture2D>(
-            oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
-    );
-    oceanTextures.displacementTexture->parameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    oceanTextures.displacementTexture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    oceanTextures.displacementTexture->parameter(GL_TEXTURE_WRAP_S, GL_REPEAT);
-    oceanTextures.displacementTexture->parameter(GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    oceanTextures.gradXTexture = std::make_shared<GLWrap::Texture2D>(
-            oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
-    );
-    oceanTextures.gradXTexture->parameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    oceanTextures.gradXTexture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    oceanTextures.gradXTexture->parameter(GL_TEXTURE_WRAP_S, GL_REPEAT);
-    oceanTextures.gradXTexture->parameter(GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    oceanTextures.gradZTexture = std::make_shared<GLWrap::Texture2D>(
-            oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
-    );
-    oceanTextures.gradZTexture->parameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    oceanTextures.gradZTexture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    oceanTextures.gradZTexture->parameter(GL_TEXTURE_WRAP_S, GL_REPEAT);
-    oceanTextures.gradZTexture->parameter(GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
 bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
@@ -541,22 +509,9 @@ void PLApp::draw_contents_forward() {
         prog->uniform("eta", 1.5f);
         prog->uniform("diffuseReflectance", glm::vec3(0.2, 0.3, 0.5));
 
-        update_ocean_textures(timer.time());
-
-        oceanTextures.displacementTexture->bindToTextureUnit(0);
-        prog->uniform("displacementMap", 0);
-        prog->uniform("displacementA", oceanBuffers.displacementA);
-        prog->uniform("displacementB", oceanBuffers.displacementB);
-
-        oceanTextures.gradXTexture->bindToTextureUnit(1);
-        prog->uniform("gradXMap", 1);
-        prog->uniform("gradXA", oceanBuffers.gradXA);
-        prog->uniform("gradXB", oceanBuffers.gradXB);
-
-        oceanTextures.gradZTexture->bindToTextureUnit(2);
-        prog->uniform("gradZMap", 2);
-        prog->uniform("gradZA", oceanBuffers.gradZA);
-        prog->uniform("gradZB", oceanBuffers.gradZB);
+        animators.oceanAnimator.displacement.bindTextureAndUniforms("displacement", prog, 0);
+        animators.oceanAnimator.gradX.bindTextureAndUniforms("gradX", prog, 1);
+        animators.oceanAnimator.gradZ.bindTextureAndUniforms("gradZ", prog, 2);
 
         std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(
                 cam->getViewProjectionMatrix(),
@@ -623,90 +578,6 @@ void PLApp::deferred_geometry_pass() {
     prog->unuse();
 }
 
-void ocean_texture_normalize_and_store(
-        const std::shared_ptr<GLWrap::Texture2D>& texture,
-        float &scale,
-        float &offset,
-        tessendorf::array2d<float> buffer
-) {
-    float min = buffer.min();
-    float max = buffer.max();
-    buffer.plus(-min);
-    buffer.times(1 / (max - min));
-
-    scale = max - min;
-    offset = min;
-
-    glBindTexture(GL_TEXTURE_2D, texture->id());
-    glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_DEPTH_COMPONENT32F,
-            buffer.size_x,
-            buffer.size_y,
-            0,
-            GL_DEPTH_COMPONENT,
-            GL_FLOAT,
-            buffer.data.get()
-    );
-    texture->generateMipmap();
-}
-
-void PLApp::update_ocean_textures(double time) {
-    tessendorf::fourier_amplitudes(
-            oceanBuffers.fourierAmplitudes,
-            oceanScene->tessendorfIv,
-            (float) time,
-            oceanScene->config);
-    tessendorf::ifft(
-            oceanBuffers.displacementMap,
-            oceanBuffers.fourierAmplitudes,
-            oceanBuffers.buffer,
-            true);
-    tessendorf::gradient_amplitudes(
-            oceanBuffers.gradientXAmplitudes,
-            oceanBuffers.gradientZAmplitudes,
-            oceanBuffers.fourierAmplitudes,
-            oceanScene->config);
-    tessendorf::ifft(
-            oceanBuffers.gradXMap,
-            oceanBuffers.gradientXAmplitudes,
-            oceanBuffers.buffer,
-            false);
-    tessendorf::ifft(
-            oceanBuffers.gradZMap,
-            oceanBuffers.gradientZAmplitudes,
-            oceanBuffers.buffer,
-            false);
-
-    // It's important than the animator gets called before ocean_texture_normalize_and_store because that function
-    // mutates the maps.
-    for (auto & animator : animators.boatAnimators) {
-        animator.update(
-                oceanBuffers.displacementMap,
-                oceanBuffers.gradXMap,
-                oceanBuffers.gradZMap,
-                oceanScene->transform()
-        );
-    }
-
-    ocean_texture_normalize_and_store(
-            oceanTextures.displacementTexture,
-            oceanBuffers.displacementA,
-            oceanBuffers.displacementB,
-            oceanBuffers.displacementMap);
-    ocean_texture_normalize_and_store(
-            oceanTextures.gradXTexture,
-            oceanBuffers.gradXA,
-            oceanBuffers.gradXB,
-            oceanBuffers.gradXMap);
-    ocean_texture_normalize_and_store(
-            oceanTextures.gradZTexture,
-            oceanBuffers.gradZA,
-            oceanBuffers.gradZB,
-            oceanBuffers.gradZMap);
-}
-
 void PLApp::deferred_ocean_geometry_pass() {
     std::shared_ptr<GLWrap::Program> prog = programOceanDeferredGeom;
     prog->use();
@@ -719,20 +590,9 @@ void PLApp::deferred_ocean_geometry_pass() {
     prog->uniform("eta", 1.5f);
     prog->uniform("diffuseReflectance", glm::vec3(0.2, 0.3, 0.5));
 
-    oceanTextures.displacementTexture->bindToTextureUnit(0);
-    prog->uniform("displacementMap", 0);
-    prog->uniform("displacementA", oceanBuffers.displacementA);
-    prog->uniform("displacementB", oceanBuffers.displacementB);
-
-    oceanTextures.gradXTexture->bindToTextureUnit(1);
-    prog->uniform("gradXMap", 1);
-    prog->uniform("gradXA", oceanBuffers.gradXA);
-    prog->uniform("gradXB", oceanBuffers.gradXB);
-
-    oceanTextures.gradZTexture->bindToTextureUnit(2);
-    prog->uniform("gradZMap", 2);
-    prog->uniform("gradZA", oceanBuffers.gradZA);
-    prog->uniform("gradZB", oceanBuffers.gradZB);
+    animators.oceanAnimator.displacement.bindTextureAndUniforms("displacement", prog, 0);
+    animators.oceanAnimator.gradX.bindTextureAndUniforms("gradX", prog, 1);
+    animators.oceanAnimator.gradZ.bindTextureAndUniforms("gradZ", prog, 2);
 
     std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(cam->getViewProjectionMatrix());
     for (auto & gridLocation : visibleGrid) {
@@ -809,20 +669,9 @@ void PLApp::deferred_ocean_shadow_pass(
     prog->uniform("mV", lightCamera.getViewMatrix());
     prog->uniform("mP", lightCamera.getProjectionMatrix());
 
-    oceanTextures.displacementTexture->bindToTextureUnit(0);
-    prog->uniform("displacementMap", 0);
-    prog->uniform("displacementA", oceanBuffers.displacementA);
-    prog->uniform("displacementB", oceanBuffers.displacementB);
-
-    oceanTextures.gradXTexture->bindToTextureUnit(1);
-    prog->uniform("gradXMap", 1);
-    prog->uniform("gradXA", oceanBuffers.gradXA);
-    prog->uniform("gradXB", oceanBuffers.gradXB);
-
-    oceanTextures.gradZTexture->bindToTextureUnit(2);
-    prog->uniform("gradZMap", 2);
-    prog->uniform("gradZA", oceanBuffers.gradZA);
-    prog->uniform("gradZB", oceanBuffers.gradZB);
+    animators.oceanAnimator.displacement.bindTextureAndUniforms("displacement", prog, 0);
+    animators.oceanAnimator.gradX.bindTextureAndUniforms("gradX", prog, 1);
+    animators.oceanAnimator.gradZ.bindTextureAndUniforms("gradZ", prog, 2);
 
     std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(cam->getViewProjectionMatrix());
     for (auto & gridLocation : visibleGrid) {
@@ -1010,10 +859,6 @@ void PLApp::deferred_merge_pass(
 }
 
 void PLApp::draw_contents_deferred() {
-    if (config.ocean) {
-        update_ocean_textures(timer.time());
-    }
-
     geomBuffer->bind();
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1151,6 +996,22 @@ void PLApp::draw_contents() {
     GLWrap::checkGLError("drawContents start");
 
     scene->animate(timer.time());
+    if (config.ocean) {
+        animators.oceanAnimator.updateOceanBuffers(timer.time());
+
+        animators.oceanAnimator.displacement.store(animators.oceanAnimator.buffers.displacementMap);
+        animators.oceanAnimator.gradX.store(animators.oceanAnimator.buffers.gradXMap);
+        animators.oceanAnimator.gradZ.store(animators.oceanAnimator.buffers.gradZMap);
+
+        for (auto & animator : animators.boatAnimators) {
+            animator.update(
+                    animators.oceanAnimator.buffers.displacementMap,
+                    animators.oceanAnimator.buffers.gradXMap,
+                    animators.oceanAnimator.buffers.gradZMap,
+                    oceanScene->transform()
+            );
+        }
+    }
     if (config.birds && timer.playing()) {
         animators.birdAnimator.animate_birds(timer.time());
     }

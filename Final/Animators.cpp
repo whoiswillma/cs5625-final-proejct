@@ -4,17 +4,21 @@
 
 #include "Animators.h"
 
-Animators::Animators(const std::shared_ptr<Scene>& scene) : birdAnimator(scene) {
+Animators::Animators(
+        const std::shared_ptr<Scene> &scene,
+        const std::shared_ptr<OceanScene> &oceanScene
+) : birdAnimator(scene),
+    oceanAnimator(oceanScene) {
     addAnimators(scene->root);
 }
 
-void Animators::addAnimators(const std::shared_ptr<Node>& node) {
+void Animators::addAnimators(const std::shared_ptr<Node> &node) {
     if (BoatNodeAnimator::is_boat(node->name)) {
         boatAnimators.emplace_back(node);
         std::cout << "Found boat node " << node->name << std::endl;
     }
 
-    for (auto & child : node->children) {
+    for (auto &child: node->children) {
         addAnimators(child);
     }
 }

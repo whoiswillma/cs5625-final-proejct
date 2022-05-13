@@ -56,6 +56,12 @@ namespace tessendorf {
             data[x * size_y + y] = v;
         }
 
+        void copyFrom(array2d<T> other) {
+            assert(other.size_x == size_x);
+            assert(other.size_y == size_y);
+            memcpy(data.get(), other.data.get(), sizeof(T) * size_x * size_y);
+        }
+
         float min() {
             float min = data[0];
             for (int i = 0; i < size_x; i++) {

@@ -49,7 +49,7 @@ struct PLAppConfig {
     bool pointLightsEnabled = true;
     bool convertAreaToPoint = true;
     bool ambientLightsEnabled = true;
-    bool sunskyEnabled = false;
+    bool sunskyEnabled = true;
     bool bloomFilterEnabled = false;
     TextureFilteringMode textureFilteringMode = TextureFilteringMode_Linear;
 
@@ -166,29 +166,6 @@ private:
     void deferred_merge_pass(const GLWrap::Texture2D &image, const GLWrap::Texture2D &blurred);
 
     std::shared_ptr<GLWrap::Mesh> oceanMesh;
-
-    // Pre-allocated buffers needed to run the ocean simulation
-    struct OceanBuffers {
-        tessendorf::array2d<std::complex<float>> buffer;
-        tessendorf::array2d<std::complex<float>> fourierAmplitudes;
-        tessendorf::array2d<std::complex<float>> gradientXAmplitudes;
-        tessendorf::array2d<std::complex<float>> gradientZAmplitudes;
-
-        tessendorf::array2d<float> displacementMap;
-        float displacementA, displacementB;
-
-        tessendorf::array2d<float> gradXMap;
-        float gradXA, gradXB;
-
-        tessendorf::array2d<float> gradZMap;
-        float gradZA, gradZB;
-    } oceanBuffers;
-
-    struct OceanTextures {
-        std::shared_ptr<GLWrap::Texture2D> displacementTexture;
-        std::shared_ptr<GLWrap::Texture2D> gradXTexture;
-        std::shared_ptr<GLWrap::Texture2D> gradZTexture;
-    } oceanTextures;
 
     Animators animators;
 
