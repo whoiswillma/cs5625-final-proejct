@@ -12,7 +12,6 @@
 #include "RTUtil/Sky.hpp"
 #include "GLWrap/Framebuffer.hpp"
 #include "MulUtil.hpp"
-#include "glm/gtx/transform.hpp"
 #include "Tessendorf.h"
 
 PLApp::PLApp(
