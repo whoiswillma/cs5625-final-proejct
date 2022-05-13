@@ -4,7 +4,7 @@
 
 #include "Animators.h"
 
-Animators::Animators(const std::shared_ptr<Scene>& scene) {
+Animators::Animators(const std::shared_ptr<Scene>& scene) : birdAnimator(scene) {
     addAnimators(scene->root);
 }
 
