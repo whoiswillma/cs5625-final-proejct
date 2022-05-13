@@ -18,11 +18,10 @@ void BoatNodeAnimator::update(
         tessendorf::array2d<float> gradZMap,
         glm::mat4 oceanTransform
 ) {
-
-    glm::vec3 positionAcc;
-    glm::vec3 normalAcc;
-    float sigma = 1;
-    int r = 5;
+    glm::vec3 positionAcc(0);
+    glm::vec3 normalAcc(0);
+    float sigma = 5;
+    int r = 3 * sigma;
     int d = 2 * r + 1;
     for (int dx = -d; dx <= d; dx++) {
         for (int dy = -d; dy <= d; dy++) {
@@ -47,12 +46,11 @@ void BoatNodeAnimator::update(
         }
     }
 
-    normalAcc = glm::normalize(normalAcc);
+    normalAcc = glm::normalize(normalAcc + glm::vec3(0, 10, 0));
 
     node->transform =
             glm::translate(positionAcc)
-            * glm::mat4_cast(glm::rotation(glm::vec3(0, 0, 1), normalAcc))
-            * glm::scale(glm::vec3(0.5));
+            * glm::mat4_cast(glm::rotation(glm::vec3(0, 1, 0), normalAcc));
 }
 
 

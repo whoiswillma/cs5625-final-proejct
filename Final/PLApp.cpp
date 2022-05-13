@@ -152,7 +152,7 @@ void PLApp::setUpPrograms() {
     programOceanForward = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("ocean forward", {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/ocean.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/microfacet.fs"},
-            {GL_FRAGMENT_SHADER, resourcePath + "shaders/forward.fs"}
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/normal.fs"}
     }));
 
     programOceanDeferredGeom = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("ocean deferred geometry pass", {
