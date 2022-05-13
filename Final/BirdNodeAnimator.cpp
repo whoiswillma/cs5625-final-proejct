@@ -40,7 +40,7 @@ void BirdNodeAnimator::animate_birds(double time) {
         for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
             if (currBoid != currNeighbor) avgPosition += this->birds[currNeighbor].position;
         }
-        avgPosition /= glm::max((this->birds.size() - 1), 1UL);
+        avgPosition /= glm::max((unsigned long)(this->birds.size() - 1), (unsigned long)1);
         return (avgPosition - this->birds[currBoid].position) / 5000.f;
     };
 
@@ -78,7 +78,7 @@ void BirdNodeAnimator::animate_birds(double time) {
         for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
             if (currBoid != currNeighbor) avgVelocity += this->birds[currNeighbor].velocity;
         }
-        avgVelocity /= glm::max((this->birds.size() - 1), 1UL);
+        avgVelocity /= glm::max((unsigned long)(this->birds.size() - 1), (unsigned long)1);
         return (avgVelocity - this->birds[currBoid].velocity) / 800.f;
     };
 
@@ -87,7 +87,7 @@ void BirdNodeAnimator::animate_birds(double time) {
         for (const auto& bird : this->birds) {
             avgPosition += bird.position;
         }
-        avgPosition /= glm::max(this->birds.size(), 1UL);
+        avgPosition /= glm::max((unsigned long)(this->birds.size()), (unsigned long)1);
 
         glm::vec3 scatterVector =  this->birds[currBoid].position - avgPosition;
         const auto scatterFactor = 1.f / glm::length(scatterVector);

@@ -1,7 +1,8 @@
 //
 // Created by William Ma on 5/12/22.
 //
-
+#define _USE_MATH_DEFINES
+#include <cmath>
 #include "BoatNodeAnimator.h"
 #include "MulUtil.hpp"
 #include <glm/gtx/transform.hpp>
