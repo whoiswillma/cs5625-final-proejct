@@ -590,7 +590,7 @@ void PLApp::deferred_texture_pass() {
 	prog->uniform("mP", cam->getProjectionMatrix());
 
 	//stbi_image_free(textureData);
-	std::string path = "../resources/scenes/bsptD.jpg";
+	std::string path = "../resources/scenes/seagull.jpg";
 	texturemap = std::make_shared<GLWrap::Texture2D>(path, true, true);
 	//texturemap->generateMipmap();
 	texturemap->bindToTextureUnit(0);
