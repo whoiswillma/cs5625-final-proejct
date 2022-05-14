@@ -45,12 +45,28 @@ struct PLAppConfig {
     float thetaSun = glm::pi<float>() / 3;
     float turbidity = 4;
     int ssaoNumSamples = 15;
+    int depthLineWidth = 2;
+    float depthLineThreshold = 0.001f;
+    int normalLineWidth = 2;
+    float normalLineThreshold = 2.0f;
+    float specularThreshold = 0.95f;
+    float specularIntensity = 1.0f;
+    float specularSmoothness = 0.5f;
+    float edgeThreshold = 0.6f;
+    float edgeIntensity = 3.0f;
+    float ambientIntensity = 0.1f;
+    float strokeThreshold = 0.5f;
+    bool fxaaEnabled = true;
+    bool rampEnabled = false;
+    bool strokeEnabled = true;
+    bool ambientCustomized = true;
     bool pcfEnabled = true;
     bool pointLightsEnabled = true;
     bool convertAreaToPoint = true;
     bool ambientLightsEnabled = true;
     bool sunskyEnabled = true;
-    bool bloomFilterEnabled = false;
+    bool bloomFilterEnabled = true;
+    bool toonEnabled = false;
     TextureFilteringMode textureFilteringMode = TextureFilteringMode_Linear;
 
     bool ocean = false;
@@ -81,6 +97,7 @@ private:
     struct NanoguiWindows {
         nanogui::Window* deferred;
         nanogui::Window* ocean;
+        nanogui::Window* toon;
     } nanoguiWindows;
 
     void setUpNanoguiControls();
@@ -97,6 +114,8 @@ private:
     std::shared_ptr<GLWrap::Program> programFlat;
     std::shared_ptr<GLWrap::Program> programForward;
     std::shared_ptr<GLWrap::Program> programDeferredGeom;
+    std::shared_ptr<GLWrap::Program> programToonPoint;
+    std::shared_ptr<GLWrap::Program> programToonOutline;
     std::shared_ptr<GLWrap::Program> programDeferredShadow;
     std::shared_ptr<GLWrap::Program> programDeferredPoint;
     std::shared_ptr<GLWrap::Program> programDeferredAmbient;
@@ -120,7 +139,7 @@ private:
     std::shared_ptr<GLWrap::Framebuffer> geomBuffer;
 
     // size = viewport, color attachments = 1, depth attachment = no, with mipmaps
-    std::shared_ptr<GLWrap::Framebuffer> accBuffer, temp1, temp2;
+    std::shared_ptr<GLWrap::Framebuffer> accBuffer, temp1, temp2, toonBuffer;
 
     // size = shadow map resolution, color attachments = 0, depth attachment = yes
     std::shared_ptr<GLWrap::Framebuffer> shadowMap;
@@ -150,6 +169,16 @@ private:
     void deferred_draw_pass(const std::shared_ptr<GLWrap::Framebuffer>& accBuffer);
     void deferred_shadow_pass(const PointLight &light);
     void deferred_ocean_shadow_pass(const PointLight &light);
+    void toon_lighting_pass(
+            const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
+            const GLWrap::Texture2D& shadowTexture,
+            const PointLight& light,
+            const glm::vec3 ambient
+    );
+    void toon_outline_pass(
+            const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
+            const GLWrap::Texture2D& image
+    );
     void deferred_lighting_pass(
             const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer,
             const GLWrap::Texture2D &shadowTexture,

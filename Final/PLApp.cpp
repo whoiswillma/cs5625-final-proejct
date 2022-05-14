@@ -13,6 +13,9 @@
 #include "GLWrap/Framebuffer.hpp"
 #include "MulUtil.hpp"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 PLApp::PLApp(
         const std::shared_ptr<Scene> &scene,
         const std::shared_ptr<OceanScene> &oceanScene,
@@ -43,7 +46,7 @@ void PLApp::resetFramebuffers() {
     geomBuffer = std::make_shared<GLWrap::Framebuffer>(getViewportSize(), 3);
 
     std::vector<std::shared_ptr<GLWrap::Framebuffer> *> colorBuffers = {
-            &accBuffer, &temp1, &temp2
+            &accBuffer, &temp1, &temp2, &toonBuffer
     };
 
     for (auto &colorBufferPtr: colorBuffers) {
@@ -90,6 +93,17 @@ void PLApp::setUpPrograms() {
     programDeferredGeom = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred geometry pass", {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/deferred.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_geom.fs"}
+    }));
+
+    programToonPoint = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred toon light pass", {
+            {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shader_inputs.fs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/toon_point.fs"}
+    }));
+
+    programToonOutline = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred toon outline pass", {
+            {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/toon_outline.fs"}
     }));
 
     programDeferredShadow = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred shadow pass", {
@@ -292,6 +306,66 @@ void PLApp::setUpNanoguiControls() {
         renderDist->set_spinnable(true);
         renderDist->set_value_increment(1);
     }
+    {
+        perform_layout();
+        int x = nanoguiWindows.ocean->position().x() + nanoguiWindows.ocean->size().x() + 10;
+
+        nanoguiWindows.toon = gui->add_window(nanogui::Vector2i(x, 10), "Toon");
+        gui->add_group("Basic");
+        gui->add_variable("Enabled", config.toonEnabled);
+
+        gui->add_group("Diffuse");
+        gui->add_variable("Ramp", config.rampEnabled);
+        gui->add_variable("Stroke", config.strokeEnabled);
+
+        auto strokeThreshold = gui->add_variable("Stroke Threshold", config.strokeThreshold);
+        strokeThreshold->set_spinnable(true);
+        strokeThreshold->set_min_max_values(0, 1);
+
+        gui->add_variable("Customized Ambient", config.ambientCustomized);
+        auto ambientIntensity = gui->add_variable("Ambient Intensity", config.ambientIntensity);
+        ambientIntensity->set_spinnable(true);
+        ambientIntensity->set_min_max_values(0, 1);
+
+        gui->add_group("Specular");
+        auto specularThreshold = gui->add_variable("Specular Threshold", config.specularThreshold);
+        specularThreshold->set_spinnable(true);
+        specularThreshold->set_min_max_values(0, 1);
+
+        auto specularIntensity = gui->add_variable("Specular Intensity", config.specularIntensity);
+        specularIntensity->set_spinnable(true);
+        specularIntensity->set_min_max_values(0, 10);
+
+        auto specularSmoothness = gui->add_variable("Specular Smoothness", config.specularSmoothness);
+        specularSmoothness->set_spinnable(true);
+        specularSmoothness->set_min_max_values(0, 10);
+
+        gui->add_group("Edge");
+        auto edgeThreshold = gui->add_variable("Edge Threshold", config.edgeThreshold);
+        edgeThreshold->set_spinnable(true);
+        edgeThreshold->set_min_max_values(0, 1);
+
+        auto edgeIntensity = gui->add_variable("Edge Intensity", config.edgeIntensity);
+        edgeIntensity->set_spinnable(true);
+        edgeIntensity->set_min_max_values(0, 10);
+
+        gui->add_group("Outline");
+        gui->add_variable("FXAA", config.fxaaEnabled);
+
+        auto depthLineWidth = gui->add_variable("Depth Line Width", config.depthLineWidth);
+        depthLineWidth->set_spinnable(true);
+        depthLineWidth->set_min_max_values(0, 10);
+
+        auto depthLineThreshold = gui->add_variable("Depth Line Threshold", config.depthLineThreshold);
+        depthLineThreshold->set_min_max_values(0, 10);
+
+        auto normalLineWidth = gui->add_variable("Normal Line Width", config.normalLineWidth);
+        normalLineWidth->set_spinnable(true);
+        normalLineWidth->set_min_max_values(0, 10);
+
+        auto normalLineThreshold = gui->add_variable("Normal Line Threshold", config.normalLineThreshold);
+        normalLineThreshold->set_min_max_values(0, 10);       
+    }
 
     perform_layout();
 }
@@ -325,6 +399,7 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
                 bool visible = !nanoguiWindows.deferred->visible();
                 nanoguiWindows.deferred->set_visible(visible);
                 nanoguiWindows.ocean->set_visible(visible);
+                nanoguiWindows.toon->set_visible(visible);
                 return true;
             }
             case GLFW_KEY_SPACE:
@@ -703,6 +778,112 @@ glm::ivec2 PLApp::getViewportSize() {
     };
 }
 
+void PLApp::toon_lighting_pass(
+    const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
+    const GLWrap::Texture2D& shadowTexture,
+    const PointLight& light,
+    const glm::vec3 ambient
+) {
+    GLWrap::Texture2D* ramp = new GLWrap::Texture2D(
+        "../resources/ramps/ramp2.png", false, true);
+    ramp->bindToTextureUnit(5);
+    GLWrap::Texture2D* hatch1 = new GLWrap::Texture2D(
+        "../resources/strokes/hatch1.png", false, true);
+    hatch1->bindToTextureUnit(6);
+    GLWrap::Texture2D* hatch2 = new GLWrap::Texture2D(
+        "../resources/strokes/hatch2.png", false, true);
+    hatch2->bindToTextureUnit(7);
+    GLWrap::Texture2D* hatch3 = new GLWrap::Texture2D(
+        "../resources/strokes/hatch3.png", false, true);
+    hatch3->bindToTextureUnit(8);
+    GLWrap::Texture2D* hatch4 = new GLWrap::Texture2D(
+        "../resources/strokes/hatch4.png", false, true);
+    hatch4->bindToTextureUnit(9);
+    GLWrap::Texture2D* hatch5 = new GLWrap::Texture2D(
+        "../resources/strokes/hatch5.png", false, true);
+    hatch5->bindToTextureUnit(10);
+    GLWrap::Texture2D* hatch6 = new GLWrap::Texture2D(
+        "../resources/strokes/hatch6.png", false, true);
+    hatch6->bindToTextureUnit(11);
+    geomBuffer->colorTexture(0).bindToTextureUnit(0);
+    geomBuffer->colorTexture(1).bindToTextureUnit(1);
+    geomBuffer->colorTexture(2).bindToTextureUnit(2);
+    geomBuffer->depthTexture().bindToTextureUnit(3);
+    shadowTexture.bindToTextureUnit(4);
+
+    std::shared_ptr<GLWrap::Program> prog = programToonPoint;
+    prog->use();
+    prog->uniform("viewportSize", glm::vec2(getViewportSize().x, getViewportSize().y));
+    prog->uniform("mV", cam->getViewMatrix());
+    prog->uniform("mP", cam->getProjectionMatrix());
+    prog->uniform("shadowBias", config.shadowBias);
+    prog->uniform("diffuseReflectanceTex", 0);
+    prog->uniform("materialTex", 1);
+    prog->uniform("normalsTex", 2);
+    prog->uniform("depthTex", 3);
+    prog->uniform("shadowTex", 4);
+    prog->uniform("ramp", 5);
+    prog->uniform("hatch1", 6);
+    prog->uniform("hatch2", 7);
+    prog->uniform("hatch3", 8);
+    prog->uniform("hatch4", 9);
+    prog->uniform("hatch5", 10);
+    prog->uniform("hatch6", 11);
+
+    RTUtil::PerspectiveCamera lightCamera = get_light_camera(light);
+    prog->uniform("mV_light", lightCamera.getViewMatrix());
+    prog->uniform("mP_light", lightCamera.getProjectionMatrix());
+    prog->uniform("wLightPos", MulUtil::mulh(
+            scene->findNode(light.name)->getTransformTo(nullptr),
+            light.position,
+            1
+    ));
+    prog->uniform("wCamPos", cam->getEye());
+
+    prog->uniform("ambient", ambient);
+    prog->uniform("ambientCustomized", config.ambientCustomized);
+    prog->uniform("ambientIntensity", config.ambientIntensity);
+    prog->uniform("rampEnabled", config.rampEnabled);
+    prog->uniform("strokeEnabled", config.strokeEnabled);
+    prog->uniform("hatchThreshold", config.strokeThreshold);
+
+    prog->uniform("specularThreshold", config.specularThreshold);
+    prog->uniform("specularIntensity", config.specularIntensity);
+    prog->uniform("specularSmoothness", config.specularSmoothness);
+    prog->uniform("edgeThreshold", config.edgeThreshold);
+    prog->uniform("edgeIntensity", config.edgeIntensity);
+
+    fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
+    prog->unuse();
+}
+
+void PLApp::toon_outline_pass(
+    const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
+    const GLWrap::Texture2D& image
+) {
+    image.bindToTextureUnit(0);
+    geomBuffer->colorTexture(2).bindToTextureUnit(1);
+    geomBuffer->depthTexture().bindToTextureUnit(2);
+
+    std::shared_ptr<GLWrap::Program> prog = programToonOutline;
+    prog->use();
+    prog->uniform("viewportSize", glm::vec2(getViewportSize().x, getViewportSize().y));
+    prog->uniform("imageTex", 0);
+    prog->uniform("normalsTex", 1);
+    prog->uniform("depthTex", 2);
+    prog->uniform("fxaaEnabled", config.fxaaEnabled);
+
+    prog->uniform("depthLineWidth", config.depthLineWidth);
+    prog->uniform("depthLineThreshold", config.depthLineThreshold);
+    prog->uniform("normalLineWidth", config.normalLineWidth);
+    prog->uniform("normalLineThreshold", config.normalLineThreshold);
+    prog->uniform("AAThreshold", 0.5f);
+    prog->uniform("AAIntensity", 2.0f);
+
+    fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
+    prog->unuse();
+}
+
 void PLApp::deferred_lighting_pass(
         const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer,
         const GLWrap::Texture2D &shadowTexture,
@@ -906,23 +1087,23 @@ void PLApp::draw_contents_deferred() {
     glClear(GL_COLOR_BUFFER_BIT);
     accBuffer->unbind();
 
-    if (config.pointLightsEnabled) {
-        std::vector<PointLight> lights;
-        for (auto & light: scene->pointLights) {
-            lights.push_back(*light);
-        }
+    std::vector<PointLight> lights;
+    for (auto& light : scene->pointLights) {
+        lights.push_back(*light);
+    }
 
-        if (config.convertAreaToPoint) {
-            for (auto & light: scene->areaLights) {
-                PointLight p;
-                p.name = light->name;
-                p.position = light->center;
-                p.power = light->power;
-                lights.push_back(p);
-            }
+    if (config.convertAreaToPoint) {
+        for (auto& light : scene->areaLights) {
+            PointLight p;
+            p.name = light->name;
+            p.position = light->center;
+            p.power = light->power;
+            lights.push_back(p);
         }
+    }
 
-        for (const PointLight &light: lights) {
+    if (config.toonEnabled) {
+        for (const PointLight& light : lights) {
             shadowMap->bind();
             glClear(GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
@@ -937,21 +1118,51 @@ void PLApp::draw_contents_deferred() {
             glEnable(GL_BLEND);
             glBlendFunc(GL_ONE, GL_ONE);
             glViewport(0, 0, getViewportSize().x, getViewportSize().y);
-            deferred_lighting_pass(geomBuffer, shadowMap->depthTexture(), light);
+            if (int(scene->ambientLights.size()) > 0 && config.ambientLightsEnabled) {
+                toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light, 
+                    scene->ambientLights[0]->radiance);
+            }
+            else {
+                toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light,
+                    glm::vec3(0));
+            }
             glDisable(GL_BLEND);
             accBuffer->unbind();
+            break;
         }
-    }
+    } else {
+        if (config.pointLightsEnabled) {
+            for (const PointLight& light : lights) {
+                shadowMap->bind();
+                glClear(GL_DEPTH_BUFFER_BIT);
+                glEnable(GL_DEPTH_TEST);
+                glViewport(0, 0, config.shadowMapResolution.x, config.shadowMapResolution.y);
+                deferred_shadow_pass(light);
+                if (config.ocean) {
+                    deferred_ocean_shadow_pass(light);
+                }
+                shadowMap->unbind();
 
-    if (config.ambientLightsEnabled) {
-        for (auto & light: scene->ambientLights) {
-            accBuffer->bind();
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_ONE, GL_ONE);
-            glViewport(0, 0, getViewportSize().x, getViewportSize().y);
-            deferred_ambient_pass(geomBuffer, *light);
-            glDisable(GL_BLEND);
-            accBuffer->unbind();
+                accBuffer->bind();
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_ONE, GL_ONE);
+                glViewport(0, 0, getViewportSize().x, getViewportSize().y);
+                deferred_lighting_pass(geomBuffer, shadowMap->depthTexture(), light);
+                glDisable(GL_BLEND);
+                accBuffer->unbind();
+            }
+        }
+
+        if (config.ambientLightsEnabled) {
+            for (auto& light : scene->ambientLights) {
+                accBuffer->bind();
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_ONE, GL_ONE);
+                glViewport(0, 0, getViewportSize().x, getViewportSize().y);
+                deferred_ambient_pass(geomBuffer, *light);
+                glDisable(GL_BLEND);
+                accBuffer->unbind();
+            }
         }
     }
 
@@ -975,6 +1186,13 @@ void PLApp::draw_contents_deferred() {
 
         // Swap temp1 and accBuffer
         std::swap(accBuffer, temp1);
+    }
+
+    if (config.toonEnabled) {
+        std::swap(accBuffer, toonBuffer);
+        accBuffer->bind();
+        toon_outline_pass(geomBuffer, toonBuffer->colorTexture());
+        accBuffer->unbind();
     }
 
     if (config.bloomFilterEnabled) {
