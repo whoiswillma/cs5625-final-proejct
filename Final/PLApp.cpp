@@ -272,26 +272,6 @@ void PLApp::setUpNanoguiControls() {
     ssao->set_spinnable(true);
     ssao->set_min_max_values(0, 100);
 
-    gui->add_group("Toon");
-    gui->add_variable("Ramp", config.rampEnabled);
-
-    gui->add_group("Outline");
-    gui->add_variable("FXAA", config.fxaaEnabled);
-
-    auto depthLineWidth = gui->add_variable("Depth Line Width", config.depthLineWidth);
-    depthLineWidth->set_spinnable(true);
-    depthLineWidth->set_min_max_values(0, 10);
-
-    auto depthLineThreshold = gui->add_variable("Depth Line Threshold", config.depthLineThreshold);
-    depthLineThreshold->set_min_max_values(0, 10);
-
-    auto normalLineWidth = gui->add_variable("Normal Line Width", config.normalLineWidth);
-    normalLineWidth->set_spinnable(true);
-    normalLineWidth->set_min_max_values(0, 10);
-
-    auto normalLineThreshold = gui->add_variable("Normal Line Threshold", config.normalLineThreshold);
-    normalLineThreshold->set_min_max_values(0, 10);
-
     gui->add_group("Sunsky");
     gui->add_variable("Enabled", config.sunskyEnabled);
 
@@ -312,6 +292,55 @@ void PLApp::setUpNanoguiControls() {
         config.textureFilteringMode = m;
         resetFramebuffers();
     });
+
+    gui->add_window(nanogui::Vector2i(getViewportSize().x - 350, 10), "Toon");
+    gui->add_group("Diffuse");
+    gui->add_variable("Ramp", config.rampEnabled);
+    gui->add_variable("Stroke", config.strokeEnabled);
+
+    gui->add_variable("Customized Ambient", config.ambientCustomized);
+    auto ambientIntensity = gui->add_variable("Ambient Intensity", config.ambientIntensity);
+    ambientIntensity->set_spinnable(true);
+    ambientIntensity->set_min_max_values(0, 1);
+
+    gui->add_group("Specular");
+    auto specularThreshold = gui->add_variable("Specular Threshold", config.specularThreshold);
+    specularThreshold->set_spinnable(true);
+    specularThreshold->set_min_max_values(0, 1);
+
+    auto specularIntensity = gui->add_variable("Specular Intensity", config.specularIntensity);
+    specularIntensity->set_spinnable(true);
+    specularIntensity->set_min_max_values(0, 10);
+
+    auto specularSmoothness = gui->add_variable("Specular Smoothness", config.specularSmoothness);
+    specularSmoothness->set_spinnable(true);
+    specularSmoothness->set_min_max_values(0, 10);
+
+    gui->add_group("Edge");
+    auto edgeThreshold = gui->add_variable("Edge Threshold", config.edgeThreshold);
+    edgeThreshold->set_spinnable(true);
+    edgeThreshold->set_min_max_values(0, 1);
+
+    auto edgeIntensity = gui->add_variable("Edge Intensity", config.edgeIntensity);
+    edgeIntensity->set_spinnable(true);
+    edgeIntensity->set_min_max_values(0, 10);
+
+    gui->add_group("Outline");
+    gui->add_variable("FXAA", config.fxaaEnabled);
+
+    auto depthLineWidth = gui->add_variable("Depth Line Width", config.depthLineWidth);
+    depthLineWidth->set_spinnable(true);
+    depthLineWidth->set_min_max_values(0, 10);
+
+    auto depthLineThreshold = gui->add_variable("Depth Line Threshold", config.depthLineThreshold);
+    depthLineThreshold->set_min_max_values(0, 10);
+
+    auto normalLineWidth = gui->add_variable("Normal Line Width", config.normalLineWidth);
+    normalLineWidth->set_spinnable(true);
+    normalLineWidth->set_min_max_values(0, 10);
+
+    auto normalLineThreshold = gui->add_variable("Normal Line Threshold", config.normalLineThreshold);
+    normalLineThreshold->set_min_max_values(0, 10);
 
     perform_layout();
 }
@@ -782,8 +811,26 @@ void PLApp::toon_lighting_pass(
     const glm::vec3 ambient
 ) {
     GLWrap::Texture2D* ramp = new GLWrap::Texture2D(
-        "../resources/ramps/ramp2.png", false, false);
+        "../resources/ramps/ramp2.png", false, true);
     ramp->bindToTextureUnit(5);
+    GLWrap::Texture2D* hatch1 = new GLWrap::Texture2D(
+        "../resources/strokes/hatch1.png", false, true);
+    hatch1->bindToTextureUnit(6);
+    GLWrap::Texture2D* hatch2 = new GLWrap::Texture2D(
+        "../resources/strokes/hatch2.png", false, true);
+    hatch2->bindToTextureUnit(7);
+    GLWrap::Texture2D* hatch3 = new GLWrap::Texture2D(
+        "../resources/strokes/hatch3.png", false, true);
+    hatch3->bindToTextureUnit(8);
+    GLWrap::Texture2D* hatch4 = new GLWrap::Texture2D(
+        "../resources/strokes/hatch4.png", false, true);
+    hatch4->bindToTextureUnit(9);
+    GLWrap::Texture2D* hatch5 = new GLWrap::Texture2D(
+        "../resources/strokes/hatch5.png", false, true);
+    hatch5->bindToTextureUnit(10);
+    GLWrap::Texture2D* hatch6 = new GLWrap::Texture2D(
+        "../resources/strokes/hatch6.png", false, true);
+    hatch6->bindToTextureUnit(11);
     geomBuffer->colorTexture(0).bindToTextureUnit(0);
     geomBuffer->colorTexture(1).bindToTextureUnit(1);
     geomBuffer->colorTexture(2).bindToTextureUnit(2);
@@ -802,6 +849,12 @@ void PLApp::toon_lighting_pass(
     prog->uniform("depthTex", 3);
     prog->uniform("shadowTex", 4);
     prog->uniform("ramp", 5);
+    prog->uniform("hatch1", 6);
+    prog->uniform("hatch2", 7);
+    prog->uniform("hatch3", 8);
+    prog->uniform("hatch4", 9);
+    prog->uniform("hatch5", 10);
+    prog->uniform("hatch6", 11);
 
     RTUtil::PerspectiveCamera lightCamera = get_light_camera(light);
     prog->uniform("mV_light", lightCamera.getViewMatrix());
@@ -811,15 +864,19 @@ void PLApp::toon_lighting_pass(
             light.position,
             1
     ));
-    prog->uniform("ambient", ambient);
-    prog->uniform("rampEnabled", config.rampEnabled);
-
     prog->uniform("wCamPos", cam->getEye());
-    prog->uniform("specularThreshold", 0.95f);
-    prog->uniform("specularIntensity", 1.0f);
-    prog->uniform("specularSmoothness", 0.5f);
-    prog->uniform("edgeThreshold", 0.6f);
-    prog->uniform("edgeIntensity", 3.0f);
+
+    prog->uniform("ambient", ambient);
+    prog->uniform("ambientCustomized", config.ambientCustomized);
+    prog->uniform("ambientIntensity", config.ambientIntensity);
+    prog->uniform("rampEnabled", config.rampEnabled);
+    prog->uniform("strokeEnabled", config.strokeEnabled);
+
+    prog->uniform("specularThreshold", config.specularThreshold);
+    prog->uniform("specularIntensity", config.specularIntensity);
+    prog->uniform("specularSmoothness", config.specularSmoothness);
+    prog->uniform("edgeThreshold", config.edgeThreshold);
+    prog->uniform("edgeIntensity", config.edgeIntensity);
 
     fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
     prog->unuse();
@@ -1052,7 +1109,7 @@ void PLApp::draw_contents_deferred() {
             glEnable(GL_BLEND);
             glBlendFunc(GL_ONE, GL_ONE);
             glViewport(0, 0, getViewportSize().x, getViewportSize().y);
-            if (int(scene->ambientLights.size()) > 0) {
+            if (int(scene->ambientLights.size()) > 0 && config.ambientLightsEnabled) {
                 toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light, 
                     scene->ambientLights[0].radiance);
             }

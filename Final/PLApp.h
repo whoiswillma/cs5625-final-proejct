@@ -41,8 +41,16 @@ struct PLAppConfig {
     float depthLineThreshold = 0.001f;
     int normalLineWidth = 2;
     float normalLineThreshold = 2.0f;
+    float specularThreshold = 0.95f;
+    float specularIntensity = 1.0f;
+    float specularSmoothness = 0.5f;
+    float edgeThreshold = 0.6f;
+    float edgeIntensity = 3.0f;
+    float ambientIntensity = 0.1f;
     bool fxaaEnabled = true;
     bool rampEnabled = false;
+    bool strokeEnabled = true;
+    bool ambientCustomized = true;
     bool pcfEnabled = true;
     bool pointLightsEnabled = true;
     bool convertAreaToPoint = true;
