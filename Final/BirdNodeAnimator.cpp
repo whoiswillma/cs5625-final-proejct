@@ -5,6 +5,7 @@
 #include "BirdNodeAnimator.h"
 
 bool BirdNodeAnimator::scatter = false;
+double BirdNodeAnimator::prevT = 0.0;
 
 BirdNodeAnimator::BirdNodeAnimator(std::shared_ptr<Scene> scene) {
     add_birds(scene->root);
@@ -32,6 +33,8 @@ void BirdNodeAnimator::slow_down_birds() {
 }
 
 void BirdNodeAnimator::animate_birds(double time) {
+    double deltaT = time - BirdNodeAnimator::prevT;
+    BirdNodeAnimator::prevT = time;
     /* returns the vector we need to add to the position of the current boid to move it
      * 1% of the way to the center of mass of its neighbors
      */
@@ -41,7 +44,7 @@ void BirdNodeAnimator::animate_birds(double time) {
             if (currBoid != currNeighbor) avgPosition += this->birds[currNeighbor].position;
         }
         avgPosition /= glm::max((unsigned long)(this->birds.size() - 1), (unsigned long)1);
-        return (avgPosition - this->birds[currBoid].position) / 5000.f;
+        return (avgPosition - this->birds[currBoid].position) / 100.f;
     };
 
     /* returns the vector we need to add to the position of the current boid to prevent collision with
@@ -52,22 +55,24 @@ void BirdNodeAnimator::animate_birds(double time) {
         for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
             if (currBoid != currNeighbor) {
                 float distance = glm::distance(this->birds[currBoid].position, this->birds[currNeighbor].position);
-                if (distance <= 0.25f) {
+                const float dist = 3.5f;
+                if (distance <= dist) {
                     correctionAmt -=
-                            (this->birds[currNeighbor].position - this->birds[currBoid].position);
+                            (this->birds[currNeighbor].position - this->birds[currBoid].position) *
+                            ((dist - distance) / dist);
                 }
             }
         }
 
         // if a bird is going to go out of bounds, make it turn hard
         if (glm::dot(Bird::walls[0].normal, this->birds[currBoid].position - Bird::walls[0].point) <= 1.0)
-            correctionAmt.x -= 0.002;
+            correctionAmt.x -= 0.1;
         if (glm::dot(Bird::walls[1].normal, this->birds[currBoid].position - Bird::walls[1].point) <= 1.0)
-            correctionAmt.x += 0.002;
+            correctionAmt.x += 0.1;
         if (glm::dot(Bird::walls[2].normal, this->birds[currBoid].position - Bird::walls[2].point) <= 1.0)
-            correctionAmt.z -= 0.002;
+            correctionAmt.z -= 0.1;
         if (glm::dot(Bird::walls[3].normal, this->birds[currBoid].position - Bird::walls[3].point) <= 1.0)
-            correctionAmt.z += 0.002;
+            correctionAmt.z += 0.1;
 
         return correctionAmt;
     };
@@ -79,7 +84,7 @@ void BirdNodeAnimator::animate_birds(double time) {
             if (currBoid != currNeighbor) avgVelocity += this->birds[currNeighbor].velocity;
         }
         avgVelocity /= glm::max((unsigned long)(this->birds.size() - 1), (unsigned long)1);
-        return (avgVelocity - this->birds[currBoid].velocity) / 800.f;
+        return (avgVelocity - this->birds[currBoid].velocity) / 160.f;
     };
 
     const auto calc_scatter = [&](const size_t currBoid) -> glm::vec3 {
@@ -91,7 +96,7 @@ void BirdNodeAnimator::animate_birds(double time) {
 
         glm::vec3 scatterVector =  this->birds[currBoid].position - avgPosition;
         const auto scatterFactor = 1.f / glm::length(scatterVector);
-        return glm::normalize(scatterVector) * scatterFactor;
+        return glm::normalize(scatterVector) * scatterFactor * 100.f;
     };
 
     glm::vec3 currWind = Bird::wind.get_wind_dir(time);
@@ -102,10 +107,11 @@ void BirdNodeAnimator::animate_birds(double time) {
         if (BirdNodeAnimator::scatter) {
             deltaV += calc_scatter(currBoid);
         }
-        deltaV += currWind / 100.f;
+        deltaV += currWind / 200.f;
+        deltaV *= 51.14f;
         deltaV.y = 0;
-        this->birds[currBoid].velocity += deltaV;
-        this->birds[currBoid].position += this->birds[currBoid].velocity;
+        this->birds[currBoid].velocity += deltaV * (float) deltaT;
+        this->birds[currBoid].position += this->birds[currBoid].velocity * (float) deltaT;
         this->birds[currBoid].update_self(deltaV);
     }
     if (BirdNodeAnimator::scatter) BirdNodeAnimator::scatter = false;
