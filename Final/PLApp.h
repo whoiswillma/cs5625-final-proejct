@@ -38,7 +38,7 @@ enum OceanShadingMode {
 struct PLAppConfig {
     glm::ivec2 shadowMapResolution = {1024, 1024};
     float shadowBias = 1e-2;
-    float shadowNear = 1;
+    float shadowNear = 1e-5;
     float shadowFar = 100;
     float shadowFov = 1;
     float exposure = 1;

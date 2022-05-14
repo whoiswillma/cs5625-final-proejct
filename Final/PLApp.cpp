@@ -389,13 +389,15 @@ void PLApp::setUpNanoguiControls() {
         normalLineWidth->set_min_max_values(0, 10);
 
         auto normalLineThreshold = gui->add_variable("Normal Line Threshold", config.normalLineThreshold);
-        normalLineThreshold->set_min_max_values(0, 10);       
+        normalLineThreshold->set_min_max_values(0, 10);
     }
 
     perform_layout();
 }
 
 void PLApp::setUpTextures() {
+    std::string path = "../resources/scenes/seagull.jpg";
+    texturemap = std::make_shared<GLWrap::Texture2D>(path, true, true);
 }
 
 bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
@@ -644,8 +646,6 @@ void PLApp::deferred_texture_pass() {
 	prog->uniform("mP", cam->getProjectionMatrix());
 
 	//stbi_image_free(textureData);
-	std::string path = "../resources/scenes/seagull.jpg";
-	texturemap = std::make_shared<GLWrap::Texture2D>(path, true, true);
 	//texturemap->generateMipmap();
 	texturemap->bindToTextureUnit(0);
 	// Perform a depth-first traversal of the scene graph and draw all the nodes.
@@ -878,6 +878,7 @@ void PLApp::toon_lighting_pass(
     prog->uniform("mV", cam->getViewMatrix());
     prog->uniform("mP", cam->getProjectionMatrix());
     prog->uniform("shadowBias", config.shadowBias);
+    prog->uniform("shadeOcean", config.oceanShadingMode == OceanShadingMode_Toon);
     prog->uniform("diffuseReflectanceTex", 0);
     prog->uniform("materialTex", 1);
     prog->uniform("normalsTex", 2);
@@ -925,6 +926,7 @@ void PLApp::toon_outline_pass(
     image.bindToTextureUnit(0);
     geomBuffer->colorTexture(2).bindToTextureUnit(1);
     geomBuffer->depthTexture().bindToTextureUnit(2);
+    geomBuffer->colorTexture(1).bindToTextureUnit(3);
 
     std::shared_ptr<GLWrap::Program> prog = programToonOutline;
     prog->use();
@@ -932,6 +934,8 @@ void PLApp::toon_outline_pass(
     prog->uniform("imageTex", 0);
     prog->uniform("normalsTex", 1);
     prog->uniform("depthTex", 2);
+    prog->uniform("materialsTex", 3);
+    prog->uniform("shadeOcean", config.oceanShadingMode == OceanShadingMode_Toon);
     prog->uniform("fxaaEnabled", config.fxaaEnabled);
 
     prog->uniform("depthLineWidth", config.depthLineWidth);
@@ -1181,7 +1185,7 @@ void PLApp::draw_contents_deferred() {
             glBlendFunc(GL_ONE, GL_ONE);
             glViewport(0, 0, getViewportSize().x, getViewportSize().y);
             if (int(scene->ambientLights.size()) > 0 && config.ambientLightsEnabled) {
-                toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light, 
+                toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light,
                     scene->ambientLights[0]->radiance);
             }
             else {

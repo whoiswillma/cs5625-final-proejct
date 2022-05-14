@@ -4,8 +4,10 @@
 uniform sampler2D imageTex;
 uniform sampler2D depthTex;
 uniform sampler2D normalsTex;
+uniform sampler2D materialsTex;
 uniform vec2 viewportSize;
 uniform bool fxaaEnabled;
+uniform bool shadeOcean = false;
 
 // Depth line Properties
 uniform int depthLineWidth;
@@ -66,7 +68,7 @@ float NormalCalc(vec2 ScreenSpaceUV) {
 vec3 AfterColor(vec2 ScreenSpaceUV) {
 	if (DepthCalc(ScreenSpaceUV) > depthLineThreshold || NormalCalc(ScreenSpaceUV) > normalLineThreshold) {
         return vec3(0);
-    } else {	
+    } else {
 		return texture(imageTex, ScreenSpaceUV).xyz;
 	}
 }
@@ -77,9 +79,15 @@ vec3 lerp(vec3 oriColor, vec3 newColor, float alpha) {
 
 void main() {
     fragColor = texture(imageTex, geom_texCoord);
+
+    bool isOceanPixel = texture(materialsTex, geom_texCoord).z == 1;
+    if (!shadeOcean && isOceanPixel) {
+        return;
+    }
+
 	bool fxaaDepth = false;
 	bool fxaaNormal = false;
-    
+
     float myDepth = texture(depthTex, geom_texCoord).x;
     float leftDepth = texture(depthTex, geom_texCoord + vec2(-depthLineWidth, 0) / viewportSize).x;
     float depthCountL = abs(myDepth - leftDepth);
@@ -184,7 +192,7 @@ void main() {
 		}
 
 		if (isHorizontal) {
-			if (depthCountU < depthCountD) {			
+			if (depthCountU < depthCountD) {
 				vec2 lerpUV = geom_texCoord + depthLineWidth * vec2(0, 1) / viewportSize;
 				if (DepthCalc(lerpUV) > depthLineThreshold) {
 					MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(0, -1) / viewportSize), pixelOffset);
@@ -282,7 +290,7 @@ void main() {
 		}
 
 		if (isHorizontal) {
-			if (normalCountU < normalCountD) {			
+			if (normalCountU < normalCountD) {
 				vec2 lerpUV = geom_texCoord + normalLineWidth * vec2(0, 1) / viewportSize;
 				if (NormalCalc(lerpUV) > normalLineThreshold) {
 					MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(0, -1) / viewportSize), pixelOffset);

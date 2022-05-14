@@ -5,6 +5,7 @@ uniform float shadowBias = 1e-3;
 uniform mat4 mV;
 uniform mat4 mP;
 uniform vec3 wCamPos;
+uniform bool shadeOcean = false;
 
 // Light Properties
 uniform vec3 wLightPos;
@@ -64,7 +65,7 @@ vec3 lerp(vec3 oriColor, vec3 newColor, float alpha) {
 
 void main() {
     ShaderInput inputs = getShaderInputs(geom_texCoord);
-    if (!inputs.foreground) {
+    if (!inputs.foreground || (!shadeOcean && inputs.ocean)) {
         fragColor = vec4(0, 0, 0, 0);
     } else {
         vec4 fragNDC4 = vec4(inputs.fragPosNDC, 1);
@@ -126,30 +127,30 @@ void main() {
                     fragColor.xyz *= texture(hatch5, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz;
                 } else if (intensity < hatchThreshold / 5 * 2) {
                     float alpha = clamp((intensity - hatchThreshold / 5) / hatchSmoothness, 0, 1);
-				    fragColor.xyz = lerp(fragColor.xyz * texture(hatch5, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz, 
+				    fragColor.xyz = lerp(fragColor.xyz * texture(hatch5, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz,
                         fragColor.xyz * texture(hatch4, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz, alpha);
                 } else if (intensity < hatchThreshold / 5 * 3) {
                     float alpha = clamp((intensity - hatchThreshold / 5 * 2) / hatchSmoothness, 0, 1);
-				    fragColor.xyz = lerp(fragColor.xyz * texture(hatch4, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz, 
+				    fragColor.xyz = lerp(fragColor.xyz * texture(hatch4, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz,
                         fragColor.xyz * texture(hatch3, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz, alpha);
                 } else if (intensity < hatchThreshold / 5 * 4) {
                     float alpha = clamp((intensity - hatchThreshold / 5 * 3) / hatchSmoothness, 0, 1);
-				    fragColor.xyz = lerp(fragColor.xyz * texture(hatch3, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz, 
+				    fragColor.xyz = lerp(fragColor.xyz * texture(hatch3, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz,
                         fragColor.xyz * texture(hatch2, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz, alpha);
                 } else if (intensity < hatchThreshold) {
                     float alpha = clamp((intensity - hatchThreshold / 5 * 4) / hatchSmoothness, 0, 1);
-				    fragColor.xyz = lerp(fragColor.xyz * texture(hatch2, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz, 
+				    fragColor.xyz = lerp(fragColor.xyz * texture(hatch2, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz,
                         fragColor.xyz * texture(hatch1, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz, alpha);
                 } else {
                     float alpha = clamp((intensity - hatchThreshold) / hatchSmoothness, 0, 1);
-				    fragColor.xyz = lerp(fragColor.xyz * texture(hatch1, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz, 
+				    fragColor.xyz = lerp(fragColor.xyz * texture(hatch1, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz,
                         fragColor.xyz, alpha);
                 }
-            }           
+            }
         } else {
             if (strokeEnabled) {
                 fragColor.xyz *= texture(hatch6, geom_texCoord * hatchScale - floor(geom_texCoord * hatchScale)).xyz;
-            }           
+            }
         }
     }
 }
