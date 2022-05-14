@@ -1,5 +1,6 @@
 #include "Scene.h"
 #include <memory>
+#include <functional>
 
 glm::mat4 Node::getTransformTo(const std::shared_ptr<Node>& other) {
     if (other == nullptr) {
@@ -57,11 +58,35 @@ void Scene::animate(double time, unsigned int animationIdx) {
         auto rotation = interpNoWrap(tick, channel.rotation, slerp);
         auto scale = interpNoWrap(tick, channel.scale, mix);
 
-        std::shared_ptr<Node> node = nameToNode[channel.nodeName];
+        std::shared_ptr<Node> node = findNode(channel.nodeName);
         const auto I = glm::identity<glm::mat4>();
         node->transform =
                 glm::translate(I, position)
                 * glm::mat4_cast(rotation)
                 * glm::scale(I, scale);
     }
+}
+
+std::shared_ptr<Node> Scene::findNode(const std::string& name) {
+    if (nameToNode[name] != nullptr) {
+        return nameToNode[name];
+    }
+
+    std::vector<std::shared_ptr<Node>> stack{root};
+
+    while (!stack.empty()) {
+        std::shared_ptr<Node> node = stack.back();
+        stack.pop_back();
+
+        if (node->name == name) {
+            nameToNode[node->name] = node;
+            return node;
+        }
+
+        for (auto & child : node->children) {
+            stack.push_back(child);
+        }
+    }
+
+    return nullptr;
 }

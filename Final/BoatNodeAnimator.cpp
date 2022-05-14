@@ -21,7 +21,7 @@ void BoatNodeAnimator::update(
 ) {
     glm::vec3 positionAcc(0);
     glm::vec3 normalAcc(0);
-    float sigma = 5;
+    int sigma = 5;
     int r = 3 * sigma;
     int d = 2 * r + 1;
     for (int dx = -d; dx <= d; dx++) {
@@ -41,7 +41,7 @@ void BoatNodeAnimator::update(
             normal4 = glm::transpose(glm::inverse(oceanTransform)) * normal4;
             normal = glm::normalize(glm::vec3(normal4.x, normal4.y, normal4.z));
 
-            float weight = 1.0f / (2 * M_PI * sigma * sigma) * exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
+            float weight = 1.0 / (2 * M_PI * sigma * sigma) * exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
             normalAcc += weight * normal;
             positionAcc += weight * position;
         }

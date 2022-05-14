@@ -27,12 +27,13 @@ struct OceanScene {
 
     const glm::ivec2 gridSize;
     const glm::vec2 sizeMeters;
+    const glm::vec3 upwelling;
 
     OceanScene(glm::vec2 sizeMeters, glm::ivec2 gridSize);
 
     glm::mat4 transform(glm::vec2 gridLocation = glm::vec2(0, 0)) const;
     std::vector<glm::vec2> visibleGridLocations(
-            glm::mat4 mWorldToNDC,
+            glm::mat4 mViewProj,
             int visibleLimit = 1000,
             int searchRadius = 100
     );

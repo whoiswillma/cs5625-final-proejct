@@ -17,6 +17,7 @@ public:
     void slow_down_birds();
     void animate_birds(double time);
     static bool scatter;
+    static double prevT;
 
 private:
     std::vector<Bird> birds;

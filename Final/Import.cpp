@@ -170,9 +170,9 @@ std::shared_ptr<Node> importRoot(const aiScene* aiScene) {
 
 void importLights(
         const aiScene* aiScene,
-        std::vector<PointLight>& pointLights,
-        std::vector<AreaLight>& areaLights,
-        std::vector<AmbientLight>& ambientLights
+        std::vector<std::shared_ptr<PointLight>>& pointLights,
+        std::vector<std::shared_ptr<AreaLight>>& areaLights,
+        std::vector<std::shared_ptr<AmbientLight>>& ambientLights
 ) {
     pointLights.clear();
     areaLights.clear();
@@ -185,51 +185,45 @@ void importLights(
         float range, width, height;
 
         if (RTUtil::parseAmbientLight(name, range)) {
-            AmbientLight light;
-            light.name = name;
+            auto light = std::make_shared<AmbientLight>();
+            light->name = name;
 
-            light.distance = range;
-            light.radiance = RTUtil::a2g(aiLight->mColorAmbient);
+            light->distance = range;
+            light->radiance = RTUtil::a2g(aiLight->mColorAmbient);
 
             ambientLights.push_back(light);
 
             std::cout << "Imported ambient light \"" << name << "\"" << std::endl;
-            std::cout << "\trange = " << light.distance << std::endl;
-            std::cout << "\tradiance = " << light.radiance << std::endl;
+            std::cout << "\trange = " << light->distance << std::endl;
+            std::cout << "\tradiance = " << light->radiance << std::endl;
 
         } else if (RTUtil::parseAreaLight(name, width, height)) {
-            AreaLight light;
-            light.name = name;
-            light.width = width;
-            light.height = height;
-            light.center = RTUtil::a2g(aiLight->mPosition);
-            light.power = RTUtil::a2g(aiLight->mColorAmbient);
-
-            aiNode* aiNode = aiScene->mRootNode->FindNode(aiLight->mName);
-            light.nodeToWorld = nodeToWorldTransform(aiNode);
+            auto light = std::make_shared<AreaLight>();
+            light->name = name;
+            light->width = width;
+            light->height = height;
+            light->center = RTUtil::a2g(aiLight->mPosition);
+            light->power = RTUtil::a2g(aiLight->mColorAmbient);
 
             areaLights.push_back(light);
 
             std::cout << "Imported area light \"" << name << "\"" <<  std::endl;
-            std::cout << "\twidth = " << light.width << std::endl;
-            std::cout << "\theight = " << light.height << std::endl;
-            std::cout << "\tcenter(local) = " << light.center << std::endl;
-            std::cout << "\tpower = " << light.power << std::endl;
+            std::cout << "\twidth = " << light->width << std::endl;
+            std::cout << "\theight = " << light->height << std::endl;
+            std::cout << "\tcenter(local) = " << light->center << std::endl;
+            std::cout << "\tpower = " << light->power << std::endl;
 
         } else {
-            PointLight light;
-            light.name = name;
-            light.power = RTUtil::a2g(aiLight->mColorAmbient);
-            light.position = RTUtil::a2g(aiLight->mPosition);
-
-            aiNode* aiNode = aiScene->mRootNode->FindNode(aiLight->mName);
-            light.nodeToWorld = nodeToWorldTransform(aiNode);
+            auto light = std::make_shared<PointLight>();
+            light->name = name;
+            light->power = RTUtil::a2g(aiLight->mColorAmbient);
+            light->position = RTUtil::a2g(aiLight->mPosition);
 
             pointLights.push_back(light);
 
             std::cout << "Imported point light \"" << name << "\"" << std::endl;
-            std::cout << "\tpower = " << light.power << std::endl;
-            std::cout << "\tposition(local) = " << light.position << std::endl;
+            std::cout << "\tpower = " << light->power << std::endl;
+            std::cout << "\tposition(local) = " << light->position << std::endl;
         }
     }
 
@@ -280,13 +274,6 @@ void importAnimations(const aiScene* aiScene, std::vector<Animation>& animations
     std::cout << "Imported " << animations.size() << " animations" << std::endl;
 }
 
-void updateNameToNode(const std::shared_ptr<Scene>& scene, const std::shared_ptr<Node>& node) {
-    scene->nameToNode[node->name] = node;
-    for (const auto& child : node->children) {
-        updateNameToNode(scene, child);
-    }
-}
-
 void dumpNodeHierarchy(const std::shared_ptr<Node>& node, int indent) {
     for (int i = 0; i < indent; i++) {
         std::cout << " ";
@@ -306,7 +293,6 @@ std::shared_ptr<Scene> importScene(const aiScene* aiScene) {
     scene->root = importRoot(aiScene);
     importLights(aiScene, scene->pointLights, scene->areaLights, scene->ambientLights);
     importAnimations(aiScene, scene->animations);
-    updateNameToNode(scene, scene->root);
     dumpNodeHierarchy(scene->root, 0);
     return scene;
 }

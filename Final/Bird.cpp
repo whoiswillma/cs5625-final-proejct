@@ -5,8 +5,9 @@
 #include "Bird.hpp"
 #include <glm/gtx/io.hpp>
 
-const double bound = 10.0;
-const float randomVelocity = 0.25;
+const double bound = 7.5;
+const float randomVelocity = 30.0;
+const float height = 15.0;
 Wind Bird::wind;
 std::vector<Wall> Bird::walls {
         Wall{ glm::vec3 {  bound, bound,  0 }, glm::normalize(glm::vec3{  -bound, 0,  0 }) },
@@ -22,7 +23,7 @@ Bird::Bird(std::shared_ptr<Node> birdNode) {
     std::uniform_real_distribution<float> dist_real(-randomVelocity, randomVelocity);
 
     this->nodePtr = birdNode;
-    this->position = glm::vec3{ dist_int(mt), 7.5, dist_int(mt) };
+    this->position = glm::vec3{ dist_int(mt), height, dist_int(mt) };
     this->velocity = glm::vec3{ dist_real(mt), 0, dist_real(mt) };
     this->initVelocity = glm::length(this->velocity);
     glm::mat4 scaleMat = glm::scale(glm::mat4(1), glm::vec3{
@@ -42,7 +43,6 @@ Bird::Bird(std::shared_ptr<Node> birdNode) {
 }
 
 void Bird::update_self(glm::vec3 deltaV) {
-
     if (glm::length(this->velocity) > this->initVelocity) this->velocity *= 0.99f;
     glm::qua<float> lookAtQuat = glm::quatLookAt(
             -glm::normalize(glm::vec3{
@@ -56,7 +56,7 @@ void Bird::update_self(glm::vec3 deltaV) {
             glm::translate(glm::mat4(1), this->position) *
             glm::mat4_cast(lookAtQuat) *
             glm::rotate(glm::mat4(1),
-                        (deltaV.x + deltaV.z) * 100.f,
+                        glm::clamp((deltaV.x + deltaV.z) * 100.f, -0.2f, 0.2f),
                         glm::normalize(this->velocity)) *
             this->rotScale;
 }

@@ -16,10 +16,12 @@ struct ShaderInput {
 ShaderInput getShaderInputs(vec2 texCoord);
 
 // Uniforms
-uniform vec3 upwelling = vec3(0.02, 0.03, 0.07);
+uniform vec3 upwelling;
+uniform float renderDistance = 150;
 const float nSnell = 1.34;
 
 uniform mat4 mP;
+uniform mat4 mV;
 
 // Inputs
 in vec2 geom_texCoord;
@@ -62,7 +64,11 @@ void main() {
         reflectivity = 0.5 * (fs * fs + ts * ts);
     }
 
-    vec3 sky = sunskyRadiance(normalize(-nI - 2 * nN * dot(-nI, nN)));
+    // Have the reflectivity fall off as a function of (distance / renderDistance)
+    reflectivity = min(exp(-length(vPosition) / renderDistance), reflectivity);
+
+    vec4 vReflectedDirection = vec4(normalize(-nI - 2 * nN * dot(-nI, nN)), 0);
+    vec3 sky = sunskyRadiance((inverse(mV) * vReflectedDirection).xyz);
 
     vec3 fragColor3 = (reflectivity * sky + (1 - reflectivity) * upwelling);
     fragColor = vec4(fragColor3, 1);

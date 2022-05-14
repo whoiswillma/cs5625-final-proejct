@@ -45,16 +45,34 @@ struct PLAppConfig {
     float thetaSun = glm::pi<float>() / 3;
     float turbidity = 4;
     int ssaoNumSamples = 15;
+    int depthLineWidth = 2;
+    float depthLineThreshold = 0.001f;
+    int normalLineWidth = 2;
+    float normalLineThreshold = 2.0f;
+    float specularThreshold = 0.95f;
+    float specularIntensity = 1.0f;
+    float specularSmoothness = 0.5f;
+    float edgeThreshold = 0.6f;
+    float edgeIntensity = 3.0f;
+    float ambientIntensity = 0.1f;
+    float strokeThreshold = 0.5f;
+    bool fxaaEnabled = true;
+    bool rampEnabled = false;
+    bool strokeEnabled = true;
+    bool ambientCustomized = true;
     bool pcfEnabled = true;
     bool pointLightsEnabled = true;
     bool convertAreaToPoint = true;
     bool ambientLightsEnabled = true;
-    bool sunskyEnabled = false;
-    bool bloomFilterEnabled = false;
+    bool sunskyEnabled = true;
+    bool bloomFilterEnabled = true;
+    bool toonEnabled = false;
     TextureFilteringMode textureFilteringMode = TextureFilteringMode_Linear;
 
     bool ocean = false;
     OceanShadingMode oceanShadingMode = OceanShadingMode_Tessendorf;
+    float renderDistance = 100;
+
     bool birds = false;
 };
 
@@ -79,6 +97,7 @@ private:
     struct NanoguiWindows {
         nanogui::Window* deferred;
         nanogui::Window* ocean;
+        nanogui::Window* toon;
     } nanoguiWindows;
 
     void setUpNanoguiControls();
@@ -87,14 +106,18 @@ private:
     void setUpPrograms();
     void setUpTextures();
     void resetFramebuffers();
+    void loadTextures();
 
     std::shared_ptr<Scene> scene;
     std::shared_ptr<OceanScene> oceanScene;
+    Animators animators;
 
     std::shared_ptr<GLWrap::Program> programFlat;
     std::shared_ptr<GLWrap::Program> programForward;
 	std::shared_ptr<GLWrap::Program> programTextureDeferred;
     std::shared_ptr<GLWrap::Program> programDeferredGeom;
+    std::shared_ptr<GLWrap::Program> programToonPoint;
+    std::shared_ptr<GLWrap::Program> programToonOutline;
     std::shared_ptr<GLWrap::Program> programDeferredShadow;
     std::shared_ptr<GLWrap::Program> programDeferredPoint;
     std::shared_ptr<GLWrap::Program> programDeferredAmbient;
@@ -108,6 +131,7 @@ private:
     std::shared_ptr<GLWrap::Program> programOceanDeferredDirectional;
 
     std::vector<std::shared_ptr<GLWrap::Mesh>> meshes;
+    std::shared_ptr<GLWrap::Mesh> oceanMesh;
     std::shared_ptr<GLWrap::Mesh> fsqMesh;
 
     std::shared_ptr<RTUtil::PerspectiveCamera> cam;
@@ -117,13 +141,20 @@ private:
     std::shared_ptr<GLWrap::Framebuffer> geomBuffer;
 
     // size = viewport, color attachments = 1, depth attachment = no, with mipmaps
-    std::shared_ptr<GLWrap::Framebuffer> accBuffer, temp1, temp2;
+    std::shared_ptr<GLWrap::Framebuffer> accBuffer, temp1, temp2, toonBuffer;
 
     // size = shadow map resolution, color attachments = 0, depth attachment = yes
     std::shared_ptr<GLWrap::Framebuffer> shadowMap;
 
 	// texturmap for seagulls
 	std::shared_ptr<GLWrap::Texture2D> texturemap;
+    std::shared_ptr<GLWrap::Texture2D> ramp;
+    std::shared_ptr<GLWrap::Texture2D> hatch1;
+    std::shared_ptr<GLWrap::Texture2D> hatch2;
+    std::shared_ptr<GLWrap::Texture2D> hatch3;
+    std::shared_ptr<GLWrap::Texture2D> hatch4;
+    std::shared_ptr<GLWrap::Texture2D> hatch5;
+    std::shared_ptr<GLWrap::Texture2D> hatch6;
 
     nanogui::Color backgroundColor;
     PLAppConfig config;
@@ -151,6 +182,16 @@ private:
     void deferred_draw_pass(const std::shared_ptr<GLWrap::Framebuffer>& accBuffer);
     void deferred_shadow_pass(const PointLight &light);
     void deferred_ocean_shadow_pass(const PointLight &light);
+    void toon_lighting_pass(
+            const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
+            const GLWrap::Texture2D& shadowTexture,
+            const PointLight& light,
+            const glm::vec3 ambient
+    );
+    void toon_outline_pass(
+            const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
+            const GLWrap::Texture2D& image
+    );
     void deferred_lighting_pass(
             const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer,
             const GLWrap::Texture2D &shadowTexture,
@@ -169,34 +210,5 @@ private:
             int level
     );
     void deferred_merge_pass(const GLWrap::Texture2D &image, const GLWrap::Texture2D &blurred);
-
-    std::shared_ptr<GLWrap::Mesh> oceanMesh;
-
-    // Pre-allocated buffers needed to run the ocean simulation
-    struct OceanBuffers {
-        tessendorf::array2d<std::complex<float>> buffer;
-        tessendorf::array2d<std::complex<float>> fourierAmplitudes;
-        tessendorf::array2d<std::complex<float>> gradientXAmplitudes;
-        tessendorf::array2d<std::complex<float>> gradientZAmplitudes;
-
-        tessendorf::array2d<float> displacementMap;
-        float displacementA, displacementB;
-
-        tessendorf::array2d<float> gradXMap;
-        float gradXA, gradXB;
-
-        tessendorf::array2d<float> gradZMap;
-        float gradZA, gradZB;
-    } oceanBuffers;
-
-    struct OceanTextures {
-        std::shared_ptr<GLWrap::Texture2D> displacementTexture;
-        std::shared_ptr<GLWrap::Texture2D> gradXTexture;
-        std::shared_ptr<GLWrap::Texture2D> gradZTexture;
-    } oceanTextures;
-
-    Animators animators;
-
-    void update_ocean_textures(double time);
 };
 #endif //CS5625_PLAPP_H

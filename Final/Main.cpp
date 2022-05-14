@@ -47,6 +47,11 @@ int main(int argc, char **argv) {
 
     PLAppConfig config;
     for (int i = 1; i < argc; i++) {
+        if (strcmp("--toon", argv[i]) == 0) {
+            config.toonEnabled = true;
+            continue;
+        }
+
         if (strcmp("--ocean", argv[i]) == 0) {
             config.ocean = true;
             continue;
@@ -79,18 +84,31 @@ int main(int argc, char **argv) {
 
         if (strcmp("--add-default-light", argv[i]) == 0) {
             {
-                PointLight light;
-                light.nodeToWorld = glm::identity<glm::mat4>();
-                light.position = {3, 4, 5};
-                light.power = {1000, 1000, 1000};
+                auto light = std::make_shared<PointLight>();
+                light->name = "Default Point Light";
+                light->position = {3, 4, 5};
+                light->power = {1000, 1000, 1000};
                 scene->pointLights.push_back(light);
+
+                auto node = std::make_shared<Node>();
+                node->name = light->name;
+                node->transform = glm::mat4(1);
+                node->parent = scene->root;
+                scene->root->children.push_back(node);
             }
 
             {
-                AmbientLight light;
-                light.radiance = {0.5, 0.5, 0.5};
-                light.distance = 0.2;
+                auto light = std::make_shared<AmbientLight>();
+                light->name = "Default Ambient Light";
+                light->radiance = {0.5, 0.5, 0.5};
+                light->distance = 0.2;
                 scene->ambientLights.push_back(light);
+
+                auto node = std::make_shared<Node>();
+                node->name = light->name;
+                node->transform = glm::mat4(1);
+                node->parent = scene->root;
+                scene->root->children.push_back(node);
             }
             continue;
         }

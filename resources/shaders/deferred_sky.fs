@@ -7,6 +7,7 @@
 vec3 sunskyRadiance(vec3 dir);
 
 // Uniforms
+uniform vec3 background;
 uniform sampler2D image;
 uniform mat4 mP;
 uniform mat4 mV;
@@ -37,5 +38,10 @@ void main() {
     vec4 eyeDirection4 = vec4(eyeDirection(xyNDC), 0);
     vec4 worldDirection4 = inverse(mV) * eyeDirection4;
     vec3 worldDirection = normalize(worldDirection4.xyz);
-    fragColor = vec4(sunskyRadiance(worldDirection), 1);
+
+    if (worldDirection.y > 0) {
+        fragColor = vec4(sunskyRadiance(worldDirection), 1);
+    } else {
+        fragColor = vec4(background, 1);
+    }
 }
