@@ -12,7 +12,6 @@
 #include "RTUtil/Sky.hpp"
 #include "GLWrap/Framebuffer.hpp"
 #include "MulUtil.hpp"
-#include "Tessendorf.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -31,15 +30,7 @@ PLApp::PLApp(
     oceanScene(oceanScene),
     shadingMode(ShadingMode_Deferred),
     config(config),
-    oceanBuffers({
-         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
-         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
-         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
-         tessendorf::array2d<std::complex<float>>(oceanScene->gridSize.x, oceanScene->gridSize.y),
-         tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
-         tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
-         tessendorf::array2d<float>(oceanScene->gridSize.x, oceanScene->gridSize.y), 0, 0,
-    }) {
+    animators(scene, oceanScene) {
 
     resetFramebuffers();
     setUpPrograms();
@@ -152,7 +143,7 @@ void PLApp::setUpPrograms() {
     programOceanForward = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("ocean forward", {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/ocean.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/microfacet.fs"},
-            {GL_FRAGMENT_SHADER, resourcePath + "shaders/forward.fs"}
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/normal.fs"}
     }));
 
     programOceanDeferredGeom = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("ocean deferred geometry pass", {
@@ -163,6 +154,13 @@ void PLApp::setUpPrograms() {
     programOceanDeferredShadow = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("ocean deferred shadow pass", {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/ocean.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shadow.fs"}
+    }));
+
+    programOceanDeferredDirectional = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("ocean deferred directional pass", {
+            {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shader_inputs.fs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/sunsky.fs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_ocean_directional.fs"}
     }));
 
     programSrgb = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("srgb", {
@@ -219,144 +217,160 @@ void PLApp::setUpMeshes() {
 
 void PLApp::setUpNanoguiControls() {
     auto *gui = new nanogui::FormHelper(this);
-    gui->add_window(nanogui::Vector2i(10, 10), "Controls");
+    {
+        nanoguiWindows.deferred = gui->add_window(nanogui::Vector2i(10, 10), "Controls");
 
-    gui->add_group("Image");
-    gui->add_variable("Exposure", config.exposure)->set_spinnable(true);
+        gui->add_group("Image");
+        gui->add_variable("Exposure", config.exposure)->set_spinnable(true);
 
-    gui->add_group("Point");
-    gui->add_variable("Enabled", config.pointLightsEnabled);
+        auto pointGroup = gui->add_group("Point");
+        gui->add_variable("Enabled", config.pointLightsEnabled);
 
-    gui->add_variable("Convert area to point", config.convertAreaToPoint);
+        gui->add_variable("Convert area to point", config.convertAreaToPoint);
 
-    auto resolutionX = gui->add_variable("Resolution X", config.shadowMapResolution.x);
-    resolutionX->set_spinnable(true);
-    resolutionX->set_min_max_values(1, 10000);
-    resolutionX->set_value_increment(1000);
-    resolutionX->set_callback([&](int x) {
-        config.shadowMapResolution.x = x;
-        resetFramebuffers();
-    });
+        auto resolutionX = gui->add_variable("Resolution X", config.shadowMapResolution.x);
+        resolutionX->set_spinnable(true);
+        resolutionX->set_min_max_values(1, 10000);
+        resolutionX->set_value_increment(1000);
+        resolutionX->set_callback([&](int x) {
+            config.shadowMapResolution.x = x;
+            resetFramebuffers();
+        });
 
-    auto resolutionY = gui->add_variable("Resolution Y", config.shadowMapResolution.y);
-    resolutionY->set_spinnable(true);
-    resolutionY->set_min_max_values(1, 10000);
-    resolutionY->set_value_increment(1000);
-    resolutionY->set_callback([&](int y) {
-        config.shadowMapResolution.y = y;
-        resetFramebuffers();
-    });
+        auto resolutionY = gui->add_variable("Resolution Y", config.shadowMapResolution.y);
+        resolutionY->set_spinnable(true);
+        resolutionY->set_min_max_values(1, 10000);
+        resolutionY->set_value_increment(1000);
+        resolutionY->set_callback([&](int y) {
+            config.shadowMapResolution.y = y;
+            resetFramebuffers();
+        });
 
-    auto bias = gui->add_variable("Bias", config.shadowBias);
-    bias->set_spinnable(true);
-    bias->set_min_max_values(1e-5, 1);
+        auto bias = gui->add_variable("Bias", config.shadowBias);
+        bias->set_spinnable(true);
+        bias->set_min_max_values(1e-5, 1);
 
-    auto nearr = gui->add_variable("Near", config.shadowNear);
-    nearr->set_spinnable(true);
-    nearr->set_min_max_values(1e-5, 1000);
+        auto nearr = gui->add_variable("Near", config.shadowNear);
+        nearr->set_spinnable(true);
+        nearr->set_min_max_values(1e-5, 1000);
 
-    auto farr = gui->add_variable("Far", config.shadowFar);
-    farr->set_spinnable(true);
-    farr->set_min_max_values(1e-5, 1000);
+        auto farr = gui->add_variable("Far", config.shadowFar);
+        farr->set_spinnable(true);
+        farr->set_min_max_values(1e-5, 1000);
 
-    auto fov = gui->add_variable("Fov", config.shadowFov);
-    fov->set_spinnable(true);
-    fov->set_min_max_values(1e-5, glm::pi<float>());
+        auto fov = gui->add_variable("Fov", config.shadowFov);
+        fov->set_spinnable(true);
+        fov->set_min_max_values(1e-5, glm::pi<float>());
 
-    gui->add_variable("PCF", config.pcfEnabled);
+        gui->add_variable("PCF", config.pcfEnabled);
 
-    gui->add_group("Ambient");
-    gui->add_variable("Enabled", config.ambientLightsEnabled);
+        gui->add_group("Ambient");
+        gui->add_variable("Enabled", config.ambientLightsEnabled);
 
-    auto ssao = gui->add_variable("SSAO Samples", config.ssaoNumSamples);
-    ssao->set_spinnable(true);
-    ssao->set_min_max_values(0, 100);
+        auto ssao = gui->add_variable("SSAO Samples", config.ssaoNumSamples);
+        ssao->set_spinnable(true);
+        ssao->set_min_max_values(0, 100);
 
-    gui->add_group("Sunsky");
-    gui->add_variable("Enabled", config.sunskyEnabled);
+        gui->add_group("Sunsky");
+        gui->add_variable("Enabled", config.sunskyEnabled);
 
-    auto sunTheta = gui->add_variable("Sun theta", config.thetaSun);
-    sunTheta->set_spinnable(true);
-    sunTheta->set_min_max_values(0, 2 * glm::pi<float>());
+        auto sunTheta = gui->add_variable("Sun theta", config.thetaSun);
+        sunTheta->set_spinnable(true);
+        sunTheta->set_min_max_values(0, glm::pi<float>() / 2);
+        sunTheta->set_value_increment(0.01);
 
-    auto turb = gui->add_variable("Turbidity", config.turbidity);
-    turb->set_spinnable(true);
-    turb->set_min_max_values(1, 10);
+        auto turb = gui->add_variable("Turbidity", config.turbidity);
+        turb->set_spinnable(true);
+        turb->set_min_max_values(1, 10);
 
-    gui->add_group("Bloom");
-    gui->add_variable("Enabled", config.bloomFilterEnabled);
+        gui->add_group("Bloom");
+        gui->add_variable("Enabled", config.bloomFilterEnabled);
 
-    auto filtMode = gui->add_variable("Filtering Mode", config.textureFilteringMode);
-    filtMode->set_items({"Nearest", "Linear"});
-    filtMode->set_callback([&](const TextureFilteringMode &m) {
-        config.textureFilteringMode = m;
-        resetFramebuffers();
-    });
+        auto filtMode = gui->add_variable("Filtering Mode", config.textureFilteringMode);
+        filtMode->set_items({"Nearest", "Linear"});
+        filtMode->set_callback([&](const TextureFilteringMode &m) {
+            config.textureFilteringMode = m;
+            resetFramebuffers();
+        });
+    }
+    {
+        perform_layout();
+        int x = nanoguiWindows.deferred->position().x() + nanoguiWindows.deferred->size().x() + 10;
 
-    gui->add_window(nanogui::Vector2i(getViewportSize().x - 350, 10), "Toon");
-    gui->add_group("Diffuse");
-    gui->add_variable("Ramp", config.rampEnabled);
-    gui->add_variable("Stroke", config.strokeEnabled);
+        nanoguiWindows.ocean = gui->add_window(nanogui::Vector2i(x, 10), "Ocean");
+        auto oceanShadingMode = gui->add_variable("Shading Mode", config.oceanShadingMode);
+        oceanShadingMode->set_items({"Plastic", "Tessendorf", "Toon"});
 
-    gui->add_variable("Customized Ambient", config.ambientCustomized);
-    auto ambientIntensity = gui->add_variable("Ambient Intensity", config.ambientIntensity);
-    ambientIntensity->set_spinnable(true);
-    ambientIntensity->set_min_max_values(0, 1);
+        auto renderDist = gui->add_variable("Render Distance", config.renderDistance);
+        renderDist->set_min_max_values(10, 200);
+        renderDist->set_spinnable(true);
+        renderDist->set_value_increment(1);
+    }
+    {
+        perform_layout();
+        int x = nanoguiWindows.ocean->position().x() + nanoguiWindows.ocean->size().x() + 10;
 
-    gui->add_group("Specular");
-    auto specularThreshold = gui->add_variable("Specular Threshold", config.specularThreshold);
-    specularThreshold->set_spinnable(true);
-    specularThreshold->set_min_max_values(0, 1);
+        nanoguiWindows.toon = gui->add_window(nanogui::Vector2i(x, 10), "Toon");
+        gui->add_group("Basic");
+        gui->add_variable("Enabled", config.toonEnabled);
 
-    auto specularIntensity = gui->add_variable("Specular Intensity", config.specularIntensity);
-    specularIntensity->set_spinnable(true);
-    specularIntensity->set_min_max_values(0, 10);
+        gui->add_group("Diffuse");
+        gui->add_variable("Ramp", config.rampEnabled);
+        gui->add_variable("Stroke", config.strokeEnabled);
 
-    auto specularSmoothness = gui->add_variable("Specular Smoothness", config.specularSmoothness);
-    specularSmoothness->set_spinnable(true);
-    specularSmoothness->set_min_max_values(0, 10);
+        auto strokeThreshold = gui->add_variable("Stroke Threshold", config.strokeThreshold);
+        strokeThreshold->set_spinnable(true);
+        strokeThreshold->set_min_max_values(0, 1);
 
-    gui->add_group("Edge");
-    auto edgeThreshold = gui->add_variable("Edge Threshold", config.edgeThreshold);
-    edgeThreshold->set_spinnable(true);
-    edgeThreshold->set_min_max_values(0, 1);
+        gui->add_variable("Customized Ambient", config.ambientCustomized);
+        auto ambientIntensity = gui->add_variable("Ambient Intensity", config.ambientIntensity);
+        ambientIntensity->set_spinnable(true);
+        ambientIntensity->set_min_max_values(0, 1);
 
-    auto edgeIntensity = gui->add_variable("Edge Intensity", config.edgeIntensity);
-    edgeIntensity->set_spinnable(true);
-    edgeIntensity->set_min_max_values(0, 10);
+        gui->add_group("Specular");
+        auto specularThreshold = gui->add_variable("Specular Threshold", config.specularThreshold);
+        specularThreshold->set_spinnable(true);
+        specularThreshold->set_min_max_values(0, 1);
 
-    gui->add_group("Outline");
-    gui->add_variable("FXAA", config.fxaaEnabled);
+        auto specularIntensity = gui->add_variable("Specular Intensity", config.specularIntensity);
+        specularIntensity->set_spinnable(true);
+        specularIntensity->set_min_max_values(0, 10);
 
-    auto depthLineWidth = gui->add_variable("Depth Line Width", config.depthLineWidth);
-    depthLineWidth->set_spinnable(true);
-    depthLineWidth->set_min_max_values(0, 10);
+        auto specularSmoothness = gui->add_variable("Specular Smoothness", config.specularSmoothness);
+        specularSmoothness->set_spinnable(true);
+        specularSmoothness->set_min_max_values(0, 10);
 
-    auto depthLineThreshold = gui->add_variable("Depth Line Threshold", config.depthLineThreshold);
-    depthLineThreshold->set_min_max_values(0, 10);
+        gui->add_group("Edge");
+        auto edgeThreshold = gui->add_variable("Edge Threshold", config.edgeThreshold);
+        edgeThreshold->set_spinnable(true);
+        edgeThreshold->set_min_max_values(0, 1);
 
-    auto normalLineWidth = gui->add_variable("Normal Line Width", config.normalLineWidth);
-    normalLineWidth->set_spinnable(true);
-    normalLineWidth->set_min_max_values(0, 10);
+        auto edgeIntensity = gui->add_variable("Edge Intensity", config.edgeIntensity);
+        edgeIntensity->set_spinnable(true);
+        edgeIntensity->set_min_max_values(0, 10);
 
-    auto normalLineThreshold = gui->add_variable("Normal Line Threshold", config.normalLineThreshold);
-    normalLineThreshold->set_min_max_values(0, 10);
+        gui->add_group("Outline");
+        gui->add_variable("FXAA", config.fxaaEnabled);
+
+        auto depthLineWidth = gui->add_variable("Depth Line Width", config.depthLineWidth);
+        depthLineWidth->set_spinnable(true);
+        depthLineWidth->set_min_max_values(0, 10);
+
+        auto depthLineThreshold = gui->add_variable("Depth Line Threshold", config.depthLineThreshold);
+        depthLineThreshold->set_min_max_values(0, 10);
+
+        auto normalLineWidth = gui->add_variable("Normal Line Width", config.normalLineWidth);
+        normalLineWidth->set_spinnable(true);
+        normalLineWidth->set_min_max_values(0, 10);
+
+        auto normalLineThreshold = gui->add_variable("Normal Line Threshold", config.normalLineThreshold);
+        normalLineThreshold->set_min_max_values(0, 10);       
+    }
 
     perform_layout();
 }
 
 void PLApp::setUpTextures() {
-    oceanDisplacementTexture = std::make_shared<GLWrap::Texture2D>(
-            oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
-    );
-
-    oceanGradXTexture = std::make_shared<GLWrap::Texture2D>(
-            oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
-    );
-
-    oceanGradZTexture = std::make_shared<GLWrap::Texture2D>(
-            oceanScene->gridSize, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT
-    );
 }
 
 bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
@@ -381,6 +395,13 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
                 shadingMode = ShadingMode_Deferred;
                 std::cout << "Switched to deferred shading" << std::endl;
                 return true;
+            case GLFW_KEY_Q: {
+                bool visible = !nanoguiWindows.deferred->visible();
+                nanoguiWindows.deferred->set_visible(visible);
+                nanoguiWindows.ocean->set_visible(visible);
+                nanoguiWindows.toon->set_visible(visible);
+                return true;
+            }
             case GLFW_KEY_SPACE:
                 timer.setPlaying(!timer.playing());
                 std::cout << "[ ] Set playback: " << (timer.playing() ? "playing" : "paused") << std::endl;
@@ -403,11 +424,16 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
                 return true;
             case GLFW_KEY_UP:
                 timer.setRate(timer.rate() + 0.25);
+                animators.birdAnimator.speed_up_birds();
                 std::cout << "[↑] Set rate: " << timer.rate() << "x" << std::endl;
                 return true;
             case GLFW_KEY_DOWN:
                 timer.setRate(timer.rate() - 0.25);
+                animators.birdAnimator.slow_down_birds();
                 std::cout << "[↓] Set rate: " << timer.rate() << "x" << std::endl;
+                return true;
+            case GLFW_KEY_S:
+                BirdNodeAnimator::scatter = true;
                 return true;
             default:
                 break;
@@ -484,12 +510,13 @@ void PLApp::draw_contents_forward() {
     glEnable(GL_DEPTH_TEST);
 
     PointLight light;
+    glm::mat4 lightTransform;
     if (scene->pointLights.empty()) {
-        light.nodeToWorld = glm::identity<glm::mat4>();
+        lightTransform = glm::mat4(1);
         light.position = glm::vec3(3, 4, 5);
         light.power = glm::vec3(1000, 1000, 1000);
     } else {
-        light = scene->pointLights.front();
+        light = *scene->pointLights.front();
     }
 
     {
@@ -501,7 +528,7 @@ void PLApp::draw_contents_forward() {
 
         prog->uniform("lightPower", light.power);
         prog->uniform("vLightPos", MulUtil::mulh(
-                cam->getViewMatrix() * light.nodeToWorld,
+                cam->getViewMatrix() * lightTransform,
                 light.position,
                 1
         ));
@@ -528,7 +555,7 @@ void PLApp::draw_contents_forward() {
                 if (!mesh.bones.empty()) {
                     for (int j = 0; j < mesh.bones.size(); j++) {
                         auto bone = mesh.bones[j];
-                        std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+                        std::shared_ptr<Node> boneNode = scene->findNode(bone.first);
                         glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
 
                         prog->uniform(
@@ -551,11 +578,10 @@ void PLApp::draw_contents_forward() {
 
         prog->uniform("mV", cam->getViewMatrix());
         prog->uniform("mP", cam->getProjectionMatrix());
-        prog->uniform("mM", oceanScene->transform);
 
         prog->uniform("lightPower", light.power);
         prog->uniform("vLightPos", MulUtil::mulh(
-                cam->getViewMatrix() * light.nodeToWorld,
+                cam->getViewMatrix() * scene->findNode(light.name)->getTransformTo(nullptr),
                 light.position,
                 1
         ));
@@ -564,24 +590,19 @@ void PLApp::draw_contents_forward() {
         prog->uniform("eta", 1.5f);
         prog->uniform("diffuseReflectance", glm::vec3(0.2, 0.3, 0.5));
 
-        update_ocean_textures(timer.time());
+        animators.oceanAnimator.displacement.bindTextureAndUniforms("displacement", prog, 0);
+        animators.oceanAnimator.gradX.bindTextureAndUniforms("gradX", prog, 1);
+        animators.oceanAnimator.gradZ.bindTextureAndUniforms("gradZ", prog, 2);
 
-        oceanDisplacementTexture->bindToTextureUnit(0);
-        prog->uniform("displacementMap", 0);
-        prog->uniform("displacementA", oceanBuffers.displacementA);
-        prog->uniform("displacementB", oceanBuffers.displacementB);
-
-        oceanGradXTexture->bindToTextureUnit(1);
-        prog->uniform("gradXMap", 1);
-        prog->uniform("gradXA", oceanBuffers.gradXA);
-        prog->uniform("gradXB", oceanBuffers.gradXB);
-
-        oceanGradZTexture->bindToTextureUnit(2);
-        prog->uniform("gradZMap", 2);
-        prog->uniform("gradZA", oceanBuffers.gradZA);
-        prog->uniform("gradZB", oceanBuffers.gradZB);
-
-        oceanMesh->drawElements();
+        std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(
+                cam->getViewProjectionMatrix(),
+                -1,
+                (int) (2.0f * config.renderDistance / sqrt(oceanScene->sizeMeters.x * oceanScene->sizeMeters.y) + 1.0f)
+        );
+        for (auto & gridLocation : visibleGrid) {
+            prog->uniform("mM", oceanScene->transform(gridLocation));
+            oceanMesh->drawElements();
+        }
 
         prog->unuse();
     }
@@ -621,7 +642,7 @@ void PLApp::deferred_geometry_pass() {
             if (!mesh.bones.empty()) {
                 for (int j = 0; j < mesh.bones.size(); j++) {
                     auto bone = mesh.bones[j];
-                    std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+                    std::shared_ptr<Node> boneNode = scene->findNode(bone.first);
                     glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
 
                     prog->uniform(
@@ -638,83 +659,38 @@ void PLApp::deferred_geometry_pass() {
     prog->unuse();
 }
 
-void texture_normalize_and_store(
-        const std::shared_ptr<GLWrap::Texture2D>& texture,
-        float &scale,
-        float &offset,
-        tessendorf::array2d<float> buffer
-) {
-    float min = buffer.min();
-    float max = buffer.max();
-    buffer.plus(-min);
-    buffer.times(1 / (max - min));
-
-    scale = max - min;
-    offset = min;
-
-    glBindTexture(GL_TEXTURE_2D, texture->id());
-    glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_DEPTH_COMPONENT32F,
-            buffer.size_x,
-            buffer.size_y,
-            0,
-            GL_DEPTH_COMPONENT,
-            GL_FLOAT,
-            buffer.data.get()
-    );
-}
-
-void PLApp::update_ocean_textures(double time) {
-    tessendorf::fourier_amplitudes(oceanBuffers.fourierAmplitudes, oceanScene->tessendorfIv, (float) time, oceanScene->config);
-    tessendorf::ifft(oceanBuffers.displacementMap, oceanBuffers.fourierAmplitudes, oceanBuffers.buffer, true);
-    texture_normalize_and_store(oceanDisplacementTexture, oceanBuffers.displacementA, oceanBuffers.displacementB, oceanBuffers.displacementMap);
-
-    tessendorf::gradient_amplitudes(oceanBuffers.gradientXAmplitudes, oceanBuffers.gradientZAmplitudes, oceanBuffers.fourierAmplitudes, oceanScene->config);
-
-    tessendorf::ifft(oceanBuffers.gradXMap, oceanBuffers.gradientXAmplitudes, oceanBuffers.buffer, false);
-    texture_normalize_and_store(oceanGradXTexture, oceanBuffers.gradXA, oceanBuffers.gradXB, oceanBuffers.gradXMap);
-
-    tessendorf::ifft(oceanBuffers.gradZMap, oceanBuffers.gradientZAmplitudes, oceanBuffers.buffer, false);
-    texture_normalize_and_store(oceanGradZTexture, oceanBuffers.gradZA, oceanBuffers.gradZB, oceanBuffers.gradZMap);
-}
-
 void PLApp::deferred_ocean_geometry_pass() {
     std::shared_ptr<GLWrap::Program> prog = programOceanDeferredGeom;
     prog->use();
 
     prog->uniform("mV", cam->getViewMatrix());
     prog->uniform("mP", cam->getProjectionMatrix());
-    prog->uniform("mM", oceanScene->transform);
+    prog->uniform("isOcean", true);
 
     prog->uniform("alpha", 0.5f);
     prog->uniform("eta", 1.5f);
     prog->uniform("diffuseReflectance", glm::vec3(0.2, 0.3, 0.5));
 
-    oceanDisplacementTexture->bindToTextureUnit(0);
-    prog->uniform("displacementMap", 0);
-    prog->uniform("displacementA", oceanBuffers.displacementA);
-    prog->uniform("displacementB", oceanBuffers.displacementB);
+    animators.oceanAnimator.displacement.bindTextureAndUniforms("displacement", prog, 0);
+    animators.oceanAnimator.gradX.bindTextureAndUniforms("gradX", prog, 1);
+    animators.oceanAnimator.gradZ.bindTextureAndUniforms("gradZ", prog, 2);
 
-    oceanGradXTexture->bindToTextureUnit(1);
-    prog->uniform("gradXMap", 1);
-    prog->uniform("gradXA", oceanBuffers.gradXA);
-    prog->uniform("gradXB", oceanBuffers.gradXB);
-
-    oceanGradZTexture->bindToTextureUnit(2);
-    prog->uniform("gradZMap", 2);
-    prog->uniform("gradZA", oceanBuffers.gradZA);
-    prog->uniform("gradZB", oceanBuffers.gradZB);
-
-    oceanMesh->drawElements();
+    std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(
+            cam->getViewProjectionMatrix(),
+            -1,
+            (int) (2.0f * config.renderDistance / sqrt(oceanScene->sizeMeters.x * oceanScene->sizeMeters.y) + 1.0f)
+    );
+    for (auto & gridLocation : visibleGrid) {
+        prog->uniform("mM", oceanScene->transform(gridLocation));
+        oceanMesh->drawElements();
+    }
 
     prog->unuse();
 }
 
 RTUtil::PerspectiveCamera PLApp::get_light_camera(const PointLight &light) const {
     return {
-            MulUtil::mulh(light.nodeToWorld, light.position, 1),
+            MulUtil::mulh(scene->findNode(light.name)->getTransformTo(nullptr), light.position, 1),
             glm::vec3(0, 0, 0),
             glm::vec3(0, 1, 0),
             1,
@@ -752,7 +728,7 @@ void PLApp::deferred_shadow_pass(
             if (!mesh.bones.empty()) {
                 for (int j = 0; j < mesh.bones.size(); j++) {
                     auto bone = mesh.bones[j];
-                    std::shared_ptr<Node> boneNode = scene->nameToNode[bone.first];
+                    std::shared_ptr<Node> boneNode = scene->findNode(bone.first);
                     glm::mat4 boneTransform = boneNode->getTransformTo(nullptr) * bone.second;
 
                     prog->uniform(
@@ -777,22 +753,20 @@ void PLApp::deferred_ocean_shadow_pass(
     RTUtil::PerspectiveCamera lightCamera = get_light_camera(light);
     prog->uniform("mV", lightCamera.getViewMatrix());
     prog->uniform("mP", lightCamera.getProjectionMatrix());
-    prog->uniform("mM", oceanScene->transform);
 
-    oceanDisplacementTexture->bindToTextureUnit(0);
-    prog->uniform("displacementMap", 0);
-    prog->uniform("displacementA", oceanBuffers.displacementA);
-    prog->uniform("displacementB", oceanBuffers.displacementB);
+    animators.oceanAnimator.displacement.bindTextureAndUniforms("displacement", prog, 0);
+    animators.oceanAnimator.gradX.bindTextureAndUniforms("gradX", prog, 1);
+    animators.oceanAnimator.gradZ.bindTextureAndUniforms("gradZ", prog, 2);
 
-    oceanGradXTexture->bindToTextureUnit(1);
-    prog->uniform("gradXMap", 1);
-    prog->uniform("gradXA", oceanBuffers.gradXA);
-    prog->uniform("gradXB", oceanBuffers.gradXB);
-
-    oceanGradZTexture->bindToTextureUnit(2);
-    prog->uniform("gradZMap", 2);
-    prog->uniform("gradZA", oceanBuffers.gradZA);
-    prog->uniform("gradZB", oceanBuffers.gradZB);
+    std::vector<glm::vec2> visibleGrid = oceanScene->visibleGridLocations(
+            cam->getViewProjectionMatrix(),
+            -1,
+            (int) (2.0f * config.renderDistance / sqrt(oceanScene->sizeMeters.x * oceanScene->sizeMeters.y) + 1.0f)
+    );
+    for (auto & gridLocation : visibleGrid) {
+        prog->uniform("mM", oceanScene->transform(gridLocation));
+        oceanMesh->drawElements();
+    }
 
     prog->unuse();
 }
@@ -860,7 +834,7 @@ void PLApp::toon_lighting_pass(
     prog->uniform("mV_light", lightCamera.getViewMatrix());
     prog->uniform("mP_light", lightCamera.getProjectionMatrix());
     prog->uniform("wLightPos", MulUtil::mulh(
-            light.nodeToWorld,
+            scene->findNode(light.name)->getTransformTo(nullptr),
             light.position,
             1
     ));
@@ -871,6 +845,7 @@ void PLApp::toon_lighting_pass(
     prog->uniform("ambientIntensity", config.ambientIntensity);
     prog->uniform("rampEnabled", config.rampEnabled);
     prog->uniform("strokeEnabled", config.strokeEnabled);
+    prog->uniform("hatchThreshold", config.strokeThreshold);
 
     prog->uniform("specularThreshold", config.specularThreshold);
     prog->uniform("specularIntensity", config.specularIntensity);
@@ -933,13 +908,14 @@ void PLApp::deferred_lighting_pass(
     prog->uniform("normalsTex", 2);
     prog->uniform("depthTex", 3);
     prog->uniform("shadowTex", 4);
+    prog->uniform("shadeOcean", config.oceanShadingMode == OceanShadingMode_Plastic);
 
     RTUtil::PerspectiveCamera lightCamera = get_light_camera(light);
     prog->uniform("mV_light", lightCamera.getViewMatrix());
     prog->uniform("mP_light", lightCamera.getProjectionMatrix());
     prog->uniform("lightPower", light.power);
     prog->uniform("vLightPos", MulUtil::mulh(
-            cam->getViewMatrix() * light.nodeToWorld,
+            cam->getViewMatrix() * scene->findNode(light.name)->getTransformTo(nullptr),
             light.position,
             1
     ));
@@ -979,11 +955,42 @@ void PLApp::deferred_ambient_pass(
     prog->uniform("materialTex", 1);
     prog->uniform("normalsTex", 2);
     prog->uniform("depthTex", 3);
+    prog->uniform("shadeOcean", config.oceanShadingMode == OceanShadingMode_Plastic);
 
     // Set uniforms in deferred_ambient.fs
     prog->uniform("ambientRadiance", light.radiance);
     prog->uniform("ambientOcclusionRange", light.distance);
     prog->uniform("numSamples", config.ssaoNumSamples);
+
+    fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
+    prog->unuse();
+}
+
+void PLApp::deferred_ocean_directional_pass(const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer) {
+    geomBuffer->colorTexture(0).bindToTextureUnit(0);
+    geomBuffer->colorTexture(1).bindToTextureUnit(1);
+    geomBuffer->colorTexture(2).bindToTextureUnit(2);
+    geomBuffer->depthTexture().bindToTextureUnit(3);
+
+    std::shared_ptr<GLWrap::Program> prog = programOceanDeferredDirectional;
+    prog->use();
+
+    // Set uniforms in deferred_shader_inputs.fs
+    prog->uniform("mP", cam->getProjectionMatrix());
+    prog->uniform("viewportSize", getViewportSize());
+    prog->uniform("diffuseReflectanceTex", 0);
+    prog->uniform("materialTex", 1);
+    prog->uniform("normalsTex", 2);
+    prog->uniform("depthTex", 3);
+
+    // Bind uniforms in sunsky.fs
+    RTUtil::Sky sky(config.thetaSun, config.turbidity);
+    sky.setUniforms(*prog);
+
+    // Bind uniforms in deferred_ocean_directional.fs
+    prog->uniform("mV", cam->getViewMatrix());
+    prog->uniform("upwelling", oceanScene->upwelling);
+    prog->uniform("renderDistance", config.renderDistance);
 
     fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
     prog->unuse();
@@ -1005,6 +1012,12 @@ void PLApp::deferred_sky_pass(
     prog->uniform("image", 0);
     prog->uniform("mP", cam->getProjectionMatrix());
     prog->uniform("mV", cam->getViewMatrix());
+
+    if (config.ocean) {
+        prog->uniform("background", oceanScene->upwelling);
+    } else {
+        prog->uniform("background", glm::vec3(0, 0, 0));
+    }
 
     fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
     prog->unuse();
@@ -1052,10 +1065,6 @@ void PLApp::deferred_merge_pass(
 }
 
 void PLApp::draw_contents_deferred() {
-    if (config.ocean) {
-        update_ocean_textures(timer.time());
-    }
-
     geomBuffer->bind();
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1079,16 +1088,16 @@ void PLApp::draw_contents_deferred() {
     accBuffer->unbind();
 
     std::vector<PointLight> lights;
-    for (const PointLight& light : scene->pointLights) {
-        lights.push_back(light);
+    for (auto& light : scene->pointLights) {
+        lights.push_back(*light);
     }
 
     if (config.convertAreaToPoint) {
-        for (const AreaLight& light : scene->areaLights) {
+        for (auto& light : scene->areaLights) {
             PointLight p;
-            p.position = light.center;
-            p.nodeToWorld = light.nodeToWorld;
-            p.power = light.power;
+            p.name = light->name;
+            p.position = light->center;
+            p.power = light->power;
             lights.push_back(p);
         }
     }
@@ -1111,7 +1120,7 @@ void PLApp::draw_contents_deferred() {
             glViewport(0, 0, getViewportSize().x, getViewportSize().y);
             if (int(scene->ambientLights.size()) > 0 && config.ambientLightsEnabled) {
                 toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light, 
-                    scene->ambientLights[0].radiance);
+                    scene->ambientLights[0]->radiance);
             }
             else {
                 toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light,
@@ -1145,16 +1154,26 @@ void PLApp::draw_contents_deferred() {
         }
 
         if (config.ambientLightsEnabled) {
-            for (const AmbientLight& light : scene->ambientLights) {
+            for (auto& light : scene->ambientLights) {
                 accBuffer->bind();
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_ONE, GL_ONE);
                 glViewport(0, 0, getViewportSize().x, getViewportSize().y);
-                deferred_ambient_pass(geomBuffer, light);
+                deferred_ambient_pass(geomBuffer, *light);
                 glDisable(GL_BLEND);
                 accBuffer->unbind();
             }
         }
+    }
+
+    if (config.ocean && config.oceanShadingMode == OceanShadingMode_Tessendorf) {
+        accBuffer->bind();
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE);
+        glViewport(0, 0, getViewportSize().x, getViewportSize().y);
+        deferred_ocean_directional_pass(geomBuffer);
+        glDisable(GL_BLEND);
+        accBuffer->unbind();
     }
 
     if (config.sunskyEnabled) {
@@ -1220,6 +1239,30 @@ void PLApp::draw_contents() {
     GLWrap::checkGLError("drawContents start");
 
     scene->animate(timer.time());
+    if (config.ocean) {
+        animators.oceanAnimator.updateOceanBuffers(timer.time());
+
+        animators.oceanAnimator.displacement.store(animators.oceanAnimator.buffers.displacementMap);
+        animators.oceanAnimator.gradX.store(animators.oceanAnimator.buffers.gradXMap);
+        animators.oceanAnimator.gradZ.store(animators.oceanAnimator.buffers.gradZMap);
+
+        for (auto & animator : animators.boatAnimators) {
+            animator.update(
+                    animators.oceanAnimator.buffers.displacementMap,
+                    animators.oceanAnimator.buffers.gradXMap,
+                    animators.oceanAnimator.buffers.gradZMap,
+                    oceanScene->transform()
+            );
+        }
+    }
+    if (config.sunskyEnabled) {
+        for (auto & animator : animators.sunLightAnimators) {
+            animator.update(config.thetaSun, config.turbidity);
+        }
+    }
+    if (config.birds && timer.playing()) {
+        animators.birdAnimator.animate_birds(timer.time());
+    }
 
     switch (shadingMode) {
         case ShadingMode_Flat:

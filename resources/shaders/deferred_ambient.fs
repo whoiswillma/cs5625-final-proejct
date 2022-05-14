@@ -6,6 +6,7 @@ const float PI = 3.14159265358979323846264;
 // HEADERS: deferred_shader_inputs.fs
 struct ShaderInput {
     bool foreground;
+    bool ocean;
     vec3 diffuseReflectance;
     vec3 normal;
     float eta;
@@ -19,6 +20,7 @@ uniform mat4 mP;
 uniform vec2 viewportSize;
 uniform sampler2D depthTex;
 uniform int numSamples;
+uniform bool shadeOcean = false;
 
 uniform vec3 ambientRadiance;
 uniform float ambientOcclusionRange;
@@ -120,7 +122,7 @@ float averageValue(int N, inout vec2 co) {
 
 void main() {
     ShaderInput inputs = getShaderInputs(geom_texCoord);
-    if (!inputs.foreground) {
+    if (!inputs.foreground || (!shadeOcean && inputs.ocean)) {
         fragColor = vec4(0, 0, 0, 0);
         return;
     }

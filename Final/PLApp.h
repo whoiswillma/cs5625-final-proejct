@@ -13,8 +13,10 @@
 #include <RTUtil/Camera.hpp>
 #include <RTUtil/CameraController.hpp>
 #include <GLWrap/Framebuffer.hpp>
+#include "Animators.h"
 #include "Tessendorf.h"
 #include "Timer.h"
+#include "Bird.hpp"
 
 enum ShadingMode {
     ShadingMode_Flat,
@@ -25,6 +27,12 @@ enum ShadingMode {
 enum TextureFilteringMode {
     TextureFilteringMode_Nearest = 0,
     TextureFilteringMode_Linear = 1
+};
+
+enum OceanShadingMode {
+    OceanShadingMode_Plastic,
+    OceanShadingMode_Tessendorf,
+    OceanShadingMode_Toon
 };
 
 struct PLAppConfig {
@@ -47,6 +55,7 @@ struct PLAppConfig {
     float edgeThreshold = 0.6f;
     float edgeIntensity = 3.0f;
     float ambientIntensity = 0.1f;
+    float strokeThreshold = 0.5f;
     bool fxaaEnabled = true;
     bool rampEnabled = false;
     bool strokeEnabled = true;
@@ -61,6 +70,10 @@ struct PLAppConfig {
     TextureFilteringMode textureFilteringMode = TextureFilteringMode_Linear;
 
     bool ocean = false;
+    OceanShadingMode oceanShadingMode = OceanShadingMode_Tessendorf;
+    float renderDistance = 100;
+
+    bool birds = false;
 };
 
 class PLApp : nanogui::Screen {
@@ -81,6 +94,12 @@ public:
     virtual void draw_contents() override;
 
 private:
+    struct NanoguiWindows {
+        nanogui::Window* deferred;
+        nanogui::Window* ocean;
+        nanogui::Window* toon;
+    } nanoguiWindows;
+
     void setUpNanoguiControls();
     void setUpMeshes();
     void setUpCamera();
@@ -90,6 +109,7 @@ private:
 
     std::shared_ptr<Scene> scene;
     std::shared_ptr<OceanScene> oceanScene;
+    Animators animators;
 
     std::shared_ptr<GLWrap::Program> programFlat;
     std::shared_ptr<GLWrap::Program> programForward;
@@ -106,8 +126,10 @@ private:
     std::shared_ptr<GLWrap::Program> programOceanForward;
     std::shared_ptr<GLWrap::Program> programOceanDeferredGeom;
     std::shared_ptr<GLWrap::Program> programOceanDeferredShadow;
+    std::shared_ptr<GLWrap::Program> programOceanDeferredDirectional;
 
     std::vector<std::shared_ptr<GLWrap::Mesh>> meshes;
+    std::shared_ptr<GLWrap::Mesh> oceanMesh;
     std::shared_ptr<GLWrap::Mesh> fsqMesh;
 
     std::shared_ptr<RTUtil::PerspectiveCamera> cam;
@@ -166,6 +188,7 @@ private:
             const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer,
             const AmbientLight &light
     );
+    void deferred_ocean_directional_pass(const std::shared_ptr<GLWrap::Framebuffer> &geomBuffer);
     void deferred_sky_pass(const GLWrap::Texture2D &image);
     void deferred_blur_pass(
             const GLWrap::Texture2D& image,
@@ -174,32 +197,6 @@ private:
             int level
     );
     void deferred_merge_pass(const GLWrap::Texture2D &image, const GLWrap::Texture2D &blurred);
-
-    std::shared_ptr<GLWrap::Mesh> oceanMesh;
-
-    // Pre-allocated buffers needed to run the ocean simulation
-    struct OceanBuffers {
-        tessendorf::array2d<std::complex<float>> buffer;
-        tessendorf::array2d<std::complex<float>> fourierAmplitudes;
-        tessendorf::array2d<std::complex<float>> gradientXAmplitudes;
-        tessendorf::array2d<std::complex<float>> gradientZAmplitudes;
-
-        tessendorf::array2d<float> displacementMap;
-        float displacementA, displacementB;
-
-        tessendorf::array2d<float> gradXMap;
-        float gradXA, gradXB;
-
-        tessendorf::array2d<float> gradZMap;
-        float gradZA, gradZB;
-    } oceanBuffers;
-
-    std::shared_ptr<GLWrap::Texture2D> oceanDisplacementTexture;
-    std::shared_ptr<GLWrap::Texture2D> oceanGradXTexture;
-    std::shared_ptr<GLWrap::Texture2D> oceanGradZTexture;
-
-    void update_ocean_textures(double time);
 };
-
 
 #endif //CS5625_PLAPP_H

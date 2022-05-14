@@ -6,6 +6,7 @@
 
 struct ShaderInput {
     bool foreground;
+    bool ocean;
     vec3 diffuseReflectance;
     vec3 normal; // Fragment normal in eye-space
     float eta;
@@ -45,6 +46,7 @@ ShaderInput getShaderInputs(vec2 texCoord) {
     vec4 material = texture(materialTex, texCoord);
     result.eta = 10 * material.x;
     result.alpha = material.y;
+    result.ocean = material.z == 1;
 
     result.fragPosNDC = getFragPosNDC(texCoord);
 
