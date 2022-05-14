@@ -55,6 +55,7 @@ struct PLAppConfig {
     float edgeThreshold = 0.6f;
     float edgeIntensity = 3.0f;
     float ambientIntensity = 0.1f;
+    float strokeThreshold = 0.5f;
     bool fxaaEnabled = true;
     bool rampEnabled = false;
     bool strokeEnabled = true;
@@ -96,6 +97,7 @@ private:
     struct NanoguiWindows {
         nanogui::Window* deferred;
         nanogui::Window* ocean;
+        nanogui::Window* toon;
     } nanoguiWindows;
 
     void setUpNanoguiControls();

@@ -306,55 +306,62 @@ void PLApp::setUpNanoguiControls() {
         renderDist->set_spinnable(true);
         renderDist->set_value_increment(1);
     }
+    {
+        perform_layout();
 
-    gui->add_window(nanogui::Vector2i(getViewportSize().x - 350, 10), "Toon");
-    gui->add_group("Diffuse");
-    gui->add_variable("Ramp", config.rampEnabled);
-    gui->add_variable("Stroke", config.strokeEnabled);
+        nanoguiWindows.toon = gui->add_window(nanogui::Vector2i(getViewportSize().x - 820, 10), "Toon");
+        gui->add_group("Diffuse");
+        gui->add_variable("Ramp", config.rampEnabled);
+        gui->add_variable("Stroke", config.strokeEnabled);
 
-    gui->add_variable("Customized Ambient", config.ambientCustomized);
-    auto ambientIntensity = gui->add_variable("Ambient Intensity", config.ambientIntensity);
-    ambientIntensity->set_spinnable(true);
-    ambientIntensity->set_min_max_values(0, 1);
+        auto strokeThreshold = gui->add_variable("Stroke Threshold", config.strokeThreshold);
+        strokeThreshold->set_spinnable(true);
+        strokeThreshold->set_min_max_values(0, 1);
 
-    gui->add_group("Specular");
-    auto specularThreshold = gui->add_variable("Specular Threshold", config.specularThreshold);
-    specularThreshold->set_spinnable(true);
-    specularThreshold->set_min_max_values(0, 1);
+        gui->add_variable("Customized Ambient", config.ambientCustomized);
+        auto ambientIntensity = gui->add_variable("Ambient Intensity", config.ambientIntensity);
+        ambientIntensity->set_spinnable(true);
+        ambientIntensity->set_min_max_values(0, 1);
 
-    auto specularIntensity = gui->add_variable("Specular Intensity", config.specularIntensity);
-    specularIntensity->set_spinnable(true);
-    specularIntensity->set_min_max_values(0, 10);
+        gui->add_group("Specular");
+        auto specularThreshold = gui->add_variable("Specular Threshold", config.specularThreshold);
+        specularThreshold->set_spinnable(true);
+        specularThreshold->set_min_max_values(0, 1);
 
-    auto specularSmoothness = gui->add_variable("Specular Smoothness", config.specularSmoothness);
-    specularSmoothness->set_spinnable(true);
-    specularSmoothness->set_min_max_values(0, 10);
+        auto specularIntensity = gui->add_variable("Specular Intensity", config.specularIntensity);
+        specularIntensity->set_spinnable(true);
+        specularIntensity->set_min_max_values(0, 10);
 
-    gui->add_group("Edge");
-    auto edgeThreshold = gui->add_variable("Edge Threshold", config.edgeThreshold);
-    edgeThreshold->set_spinnable(true);
-    edgeThreshold->set_min_max_values(0, 1);
+        auto specularSmoothness = gui->add_variable("Specular Smoothness", config.specularSmoothness);
+        specularSmoothness->set_spinnable(true);
+        specularSmoothness->set_min_max_values(0, 10);
 
-    auto edgeIntensity = gui->add_variable("Edge Intensity", config.edgeIntensity);
-    edgeIntensity->set_spinnable(true);
-    edgeIntensity->set_min_max_values(0, 10);
+        gui->add_group("Edge");
+        auto edgeThreshold = gui->add_variable("Edge Threshold", config.edgeThreshold);
+        edgeThreshold->set_spinnable(true);
+        edgeThreshold->set_min_max_values(0, 1);
 
-    gui->add_group("Outline");
-    gui->add_variable("FXAA", config.fxaaEnabled);
+        auto edgeIntensity = gui->add_variable("Edge Intensity", config.edgeIntensity);
+        edgeIntensity->set_spinnable(true);
+        edgeIntensity->set_min_max_values(0, 10);
 
-    auto depthLineWidth = gui->add_variable("Depth Line Width", config.depthLineWidth);
-    depthLineWidth->set_spinnable(true);
-    depthLineWidth->set_min_max_values(0, 10);
+        gui->add_group("Outline");
+        gui->add_variable("FXAA", config.fxaaEnabled);
 
-    auto depthLineThreshold = gui->add_variable("Depth Line Threshold", config.depthLineThreshold);
-    depthLineThreshold->set_min_max_values(0, 10);
+        auto depthLineWidth = gui->add_variable("Depth Line Width", config.depthLineWidth);
+        depthLineWidth->set_spinnable(true);
+        depthLineWidth->set_min_max_values(0, 10);
 
-    auto normalLineWidth = gui->add_variable("Normal Line Width", config.normalLineWidth);
-    normalLineWidth->set_spinnable(true);
-    normalLineWidth->set_min_max_values(0, 10);
+        auto depthLineThreshold = gui->add_variable("Depth Line Threshold", config.depthLineThreshold);
+        depthLineThreshold->set_min_max_values(0, 10);
 
-    auto normalLineThreshold = gui->add_variable("Normal Line Threshold", config.normalLineThreshold);
-    normalLineThreshold->set_min_max_values(0, 10);
+        auto normalLineWidth = gui->add_variable("Normal Line Width", config.normalLineWidth);
+        normalLineWidth->set_spinnable(true);
+        normalLineWidth->set_min_max_values(0, 10);
+
+        auto normalLineThreshold = gui->add_variable("Normal Line Threshold", config.normalLineThreshold);
+        normalLineThreshold->set_min_max_values(0, 10);       
+    }
 
     perform_layout();
 }
@@ -388,6 +395,7 @@ bool PLApp::keyboard_event(int key, int scancode, int action, int modifiers) {
                 bool visible = !nanoguiWindows.deferred->visible();
                 nanoguiWindows.deferred->set_visible(visible);
                 nanoguiWindows.ocean->set_visible(visible);
+                nanoguiWindows.toon->set_visible(visible);
                 return true;
             }
             case GLFW_KEY_SPACE:
@@ -822,7 +830,7 @@ void PLApp::toon_lighting_pass(
     prog->uniform("mV_light", lightCamera.getViewMatrix());
     prog->uniform("mP_light", lightCamera.getProjectionMatrix());
     prog->uniform("wLightPos", MulUtil::mulh(
-            light.nodeToWorld,
+            scene->findNode(light.name)->getTransformTo(nullptr),
             light.position,
             1
     ));
@@ -833,6 +841,7 @@ void PLApp::toon_lighting_pass(
     prog->uniform("ambientIntensity", config.ambientIntensity);
     prog->uniform("rampEnabled", config.rampEnabled);
     prog->uniform("strokeEnabled", config.strokeEnabled);
+    prog->uniform("hatchThreshold", config.strokeThreshold);
 
     prog->uniform("specularThreshold", config.specularThreshold);
     prog->uniform("specularIntensity", config.specularIntensity);
@@ -1075,16 +1084,16 @@ void PLApp::draw_contents_deferred() {
     accBuffer->unbind();
 
     std::vector<PointLight> lights;
-    for (const PointLight& light : scene->pointLights) {
-        lights.push_back(light);
+    for (auto& light : scene->pointLights) {
+        lights.push_back(*light);
     }
 
     if (config.convertAreaToPoint) {
-        for (const AreaLight& light : scene->areaLights) {
+        for (auto& light : scene->areaLights) {
             PointLight p;
-            p.position = light.center;
-            p.nodeToWorld = light.nodeToWorld;
-            p.power = light.power;
+            p.name = light->name;
+            p.position = light->center;
+            p.power = light->power;
             lights.push_back(p);
         }
     }
@@ -1107,7 +1116,7 @@ void PLApp::draw_contents_deferred() {
             glViewport(0, 0, getViewportSize().x, getViewportSize().y);
             if (int(scene->ambientLights.size()) > 0 && config.ambientLightsEnabled) {
                 toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light, 
-                    scene->ambientLights[0].radiance);
+                    scene->ambientLights[0]->radiance);
             }
             else {
                 toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light,
@@ -1141,12 +1150,12 @@ void PLApp::draw_contents_deferred() {
         }
 
         if (config.ambientLightsEnabled) {
-            for (const AmbientLight& light : scene->ambientLights) {
+            for (auto& light : scene->ambientLights) {
                 accBuffer->bind();
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_ONE, GL_ONE);
                 glViewport(0, 0, getViewportSize().x, getViewportSize().y);
-                deferred_ambient_pass(geomBuffer, light);
+                deferred_ambient_pass(geomBuffer, *light);
                 glDisable(GL_BLEND);
                 accBuffer->unbind();
             }

@@ -49,11 +49,12 @@ out vec4 fragColor;
 // HEADERS: deferred_shader_inputs.fs
 struct ShaderInput {
     bool foreground;
+    bool ocean;
     vec3 diffuseReflectance;
-    vec3 normal;
+    vec3 normal; // Fragment normal in eye-space
     float eta;
     float alpha;
-    vec3 fragPosNDC;
+    vec3 fragPosNDC; // Fragment coordinates in NDC
 };
 ShaderInput getShaderInputs(vec2 texCoord);
 
