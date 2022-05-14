@@ -33,6 +33,7 @@ PLApp::PLApp(
     animators(scene, oceanScene) {
 
     resetFramebuffers();
+    loadTextures();
     setUpPrograms();
     setUpCamera();
     setUpMeshes();
@@ -72,6 +73,23 @@ void PLApp::resetFramebuffers() {
             config.shadowMapResolution,
             0
     ));
+}
+
+void PLApp::loadTextures() {
+    ramp.reset(new GLWrap::Texture2D(
+        "../resources/ramps/ramp2.png", false, true));
+    hatch1.reset(new GLWrap::Texture2D(
+        "../resources/strokes/hatch1.png", false, true));
+    hatch2.reset(new GLWrap::Texture2D(
+        "../resources/strokes/hatch2.png", false, true));
+    hatch3.reset(new GLWrap::Texture2D(
+        "../resources/strokes/hatch3.png", false, true));
+    hatch4.reset(new GLWrap::Texture2D(
+        "../resources/strokes/hatch4.png", false, true));
+    hatch5.reset(new GLWrap::Texture2D(
+        "../resources/strokes/hatch5.png", false, true));
+    hatch6.reset(new GLWrap::Texture2D(
+        "../resources/strokes/hatch6.png", false, true));
 }
 
 void PLApp::setUpPrograms() {
@@ -784,26 +802,12 @@ void PLApp::toon_lighting_pass(
     const PointLight& light,
     const glm::vec3 ambient
 ) {
-    GLWrap::Texture2D* ramp = new GLWrap::Texture2D(
-        "../resources/ramps/ramp2.png", false, true);
     ramp->bindToTextureUnit(5);
-    GLWrap::Texture2D* hatch1 = new GLWrap::Texture2D(
-        "../resources/strokes/hatch1.png", false, true);
     hatch1->bindToTextureUnit(6);
-    GLWrap::Texture2D* hatch2 = new GLWrap::Texture2D(
-        "../resources/strokes/hatch2.png", false, true);
     hatch2->bindToTextureUnit(7);
-    GLWrap::Texture2D* hatch3 = new GLWrap::Texture2D(
-        "../resources/strokes/hatch3.png", false, true);
     hatch3->bindToTextureUnit(8);
-    GLWrap::Texture2D* hatch4 = new GLWrap::Texture2D(
-        "../resources/strokes/hatch4.png", false, true);
     hatch4->bindToTextureUnit(9);
-    GLWrap::Texture2D* hatch5 = new GLWrap::Texture2D(
-        "../resources/strokes/hatch5.png", false, true);
     hatch5->bindToTextureUnit(10);
-    GLWrap::Texture2D* hatch6 = new GLWrap::Texture2D(
-        "../resources/strokes/hatch6.png", false, true);
     hatch6->bindToTextureUnit(11);
     geomBuffer->colorTexture(0).bindToTextureUnit(0);
     geomBuffer->colorTexture(1).bindToTextureUnit(1);

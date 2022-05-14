@@ -106,6 +106,7 @@ private:
     void setUpPrograms();
     void setUpTextures();
     void resetFramebuffers();
+    void loadTextures();
 
     std::shared_ptr<Scene> scene;
     std::shared_ptr<OceanScene> oceanScene;
@@ -143,6 +144,14 @@ private:
 
     // size = shadow map resolution, color attachments = 0, depth attachment = yes
     std::shared_ptr<GLWrap::Framebuffer> shadowMap;
+
+    std::shared_ptr<GLWrap::Texture2D> ramp;
+    std::shared_ptr<GLWrap::Texture2D> hatch1;
+    std::shared_ptr<GLWrap::Texture2D> hatch2;
+    std::shared_ptr<GLWrap::Texture2D> hatch3;
+    std::shared_ptr<GLWrap::Texture2D> hatch4;
+    std::shared_ptr<GLWrap::Texture2D> hatch5;
+    std::shared_ptr<GLWrap::Texture2D> hatch6;
 
     nanogui::Color backgroundColor;
     PLAppConfig config;
