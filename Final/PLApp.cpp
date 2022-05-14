@@ -308,8 +308,12 @@ void PLApp::setUpNanoguiControls() {
     }
     {
         perform_layout();
+        int x = nanoguiWindows.ocean->position().x() + nanoguiWindows.ocean->size().x() + 10;
 
-        nanoguiWindows.toon = gui->add_window(nanogui::Vector2i(getViewportSize().x - 820, 10), "Toon");
+        nanoguiWindows.toon = gui->add_window(nanogui::Vector2i(x, 10), "Toon");
+        gui->add_group("Basic");
+        gui->add_variable("Enabled", config.toonEnabled);
+
         gui->add_group("Diffuse");
         gui->add_variable("Ramp", config.rampEnabled);
         gui->add_variable("Stroke", config.strokeEnabled);
