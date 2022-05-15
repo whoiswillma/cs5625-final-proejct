@@ -88,7 +88,7 @@ void BirdNodeAnimator::animate_birds(double time) {
                         break;
                     default:
                         dir4 = glm::rotate(
-                            -glm::pi<float>() / 4,
+                            -glm::pi<float>() / 6,
                             glm::vec3(0, 1, 0)
                         ) * glm::vec4(wall.normal, 0);
                         break;

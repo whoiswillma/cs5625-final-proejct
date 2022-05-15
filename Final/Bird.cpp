@@ -53,7 +53,6 @@ void Bird::update_self(glm::vec3 deltaV) {
             glm::vec3{ 0, 1, 0 }
         );
     float rollTheta = glm::pow(glm::dot(glm::vec3(0, 1, 0), glm::cross(deltaV, this->velocity)) / 200.0f, 3.0f) / 100.0f;
-    std::cout << rollTheta << std::endl;
     this->nodePtr->transform =
             glm::translate(glm::mat4(1), this->position) *
             glm::rotate(glm::mat4(1),
