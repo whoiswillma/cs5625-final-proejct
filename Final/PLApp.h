@@ -58,6 +58,7 @@ struct PLAppConfig {
     bool fxaaEnabled = true;
     bool rampEnabled = false;
     bool strokeEnabled = true;
+    bool multipleLightsEnabled = false;
     bool pcfEnabled = true;
     bool pointLightsEnabled = true;
     bool convertAreaToPoint = true;
@@ -115,6 +116,7 @@ private:
 	std::shared_ptr<GLWrap::Program> programTextureDeferred;
     std::shared_ptr<GLWrap::Program> programDeferredGeom;
     std::shared_ptr<GLWrap::Program> programToonPoint;
+    std::shared_ptr<GLWrap::Program> programToonMerge;
     std::shared_ptr<GLWrap::Program> programToonOutline;
     std::shared_ptr<GLWrap::Program> programDeferredShadow;
     std::shared_ptr<GLWrap::Program> programDeferredPoint;
@@ -139,7 +141,7 @@ private:
     std::shared_ptr<GLWrap::Framebuffer> geomBuffer;
 
     // size = viewport, color attachments = 1, depth attachment = no, with mipmaps
-    std::shared_ptr<GLWrap::Framebuffer> accBuffer, temp1, temp2, toonBuffer;
+    std::shared_ptr<GLWrap::Framebuffer> accBuffer, temp1, temp2, toonBuffer, outlineBuffer;
 
     // size = shadow map resolution, color attachments = 0, depth attachment = yes
     std::shared_ptr<GLWrap::Framebuffer> shadowMap;
@@ -183,8 +185,13 @@ private:
     void toon_lighting_pass(
             const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
             const GLWrap::Texture2D& shadowTexture,
-            const PointLight& light,
-            const glm::vec3 ambient
+            const PointLight& light
+    );
+    void toon_merge_pass(
+        const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
+        const GLWrap::Texture2D& toonTexture,
+        const glm::vec3 ambient,
+        const int lightNum    
     );
     void toon_outline_pass(
             const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
