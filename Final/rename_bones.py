@@ -1,6 +1,6 @@
 from pygltflib import GLTF2
-INPUT_FILE = "../resources/scenes/final_test.glb"
-OUTPUT_FILE = "../resources/scenes/final_final.glb"
+INPUT_FILE = "../resources/scenes/final_30b_rtm.glb"
+OUTPUT_FILE = "../resources/scenes/final_30b_rtm_edited_bones.glb"
 gltf = GLTF2.load(INPUT_FILE)
 count = 1
 for node in gltf.nodes:
