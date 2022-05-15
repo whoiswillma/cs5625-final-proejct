@@ -47,7 +47,7 @@ void PLApp::resetFramebuffers() {
     geomBuffer = std::make_shared<GLWrap::Framebuffer>(getViewportSize(), 3);
 
     std::vector<std::shared_ptr<GLWrap::Framebuffer> *> colorBuffers = {
-            &accBuffer, &temp1, &temp2, &toonBuffer
+            &accBuffer, &temp1, &temp2, &toonBuffer, &outlineBuffer
     };
 
     for (auto &colorBufferPtr: colorBuffers) {
@@ -117,6 +117,12 @@ void PLApp::setUpPrograms() {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shader_inputs.fs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/toon_point.fs"}
+    }));
+
+    programToonMerge = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred toon merge pass", {
+            {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shader_inputs.fs"},
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/toon_merge.fs"}
     }));
 
     programToonOutline = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("deferred toon outline pass", {
@@ -337,6 +343,7 @@ void PLApp::setUpNanoguiControls() {
 
         nanoguiWindows.toon = gui->add_window(nanogui::Vector2i(x, 10), "Toon");
         gui->add_variable("Enabled", config.toonEnabled);
+        gui->add_variable("Multiple Point Lights", config.multipleLightsEnabled);
 
         gui->add_group("Diffuse");
         gui->add_variable("Ramp", config.rampEnabled);
@@ -369,8 +376,6 @@ void PLApp::setUpNanoguiControls() {
         edgeIntensity->set_min_max_values(0, 10);
 
         gui->add_group("Outline");
-        gui->add_variable("FXAA", config.fxaaEnabled);
-
         auto depthLineWidth = gui->add_variable("Depth Line Width", config.depthLineWidth);
         depthLineWidth->set_spinnable(true);
         depthLineWidth->set_min_max_values(0, 10);
@@ -384,6 +389,15 @@ void PLApp::setUpNanoguiControls() {
 
         auto normalLineThreshold = gui->add_variable("Normal Line Threshold", config.normalLineThreshold);
         normalLineThreshold->set_min_max_values(0, 10);
+
+        gui->add_variable("FXAA", config.fxaaEnabled);
+        auto AAThreshold = gui->add_variable("AA Threshold", config.AAThreshold);
+        AAThreshold->set_spinnable(true);
+        AAThreshold->set_min_max_values(0, 0.5);
+
+        auto AAIntensity = gui->add_variable("AA Intensity", config.AAIntensity);
+        AAIntensity->set_spinnable(true);
+        AAIntensity->set_min_max_values(0, 10);
     }
 
     perform_layout();
@@ -850,16 +864,8 @@ glm::ivec2 PLApp::getViewportSize() {
 void PLApp::toon_lighting_pass(
     const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
     const GLWrap::Texture2D& shadowTexture,
-    const PointLight& light,
-    const glm::vec3 ambient
+    const PointLight& light
 ) {
-    ramp->bindToTextureUnit(5);
-    hatch1->bindToTextureUnit(6);
-    hatch2->bindToTextureUnit(7);
-    hatch3->bindToTextureUnit(8);
-    hatch4->bindToTextureUnit(9);
-    hatch5->bindToTextureUnit(10);
-    hatch6->bindToTextureUnit(11);
     geomBuffer->colorTexture(0).bindToTextureUnit(0);
     geomBuffer->colorTexture(1).bindToTextureUnit(1);
     geomBuffer->colorTexture(2).bindToTextureUnit(2);
@@ -878,13 +884,6 @@ void PLApp::toon_lighting_pass(
     prog->uniform("normalsTex", 2);
     prog->uniform("depthTex", 3);
     prog->uniform("shadowTex", 4);
-    prog->uniform("ramp", 5);
-    prog->uniform("hatch1", 6);
-    prog->uniform("hatch2", 7);
-    prog->uniform("hatch3", 8);
-    prog->uniform("hatch4", 9);
-    prog->uniform("hatch5", 10);
-    prog->uniform("hatch6", 11);
 
     RTUtil::PerspectiveCamera lightCamera = get_light_camera(light);
     prog->uniform("mV_light", lightCamera.getViewMatrix());
@@ -896,10 +895,52 @@ void PLApp::toon_lighting_pass(
     ));
     prog->uniform("wCamPos", cam->getEye());
 
+    fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
+    prog->unuse();
+}
+
+void PLApp::toon_merge_pass(
+    const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
+    const GLWrap::Texture2D& toonTexture,
+    const glm::vec3 ambient,
+    const int lightNum    
+) {
+    geomBuffer->colorTexture(0).bindToTextureUnit(0);
+    geomBuffer->colorTexture(1).bindToTextureUnit(1);
+    geomBuffer->colorTexture(2).bindToTextureUnit(2);
+    geomBuffer->depthTexture().bindToTextureUnit(3);
+    toonTexture.bindToTextureUnit(4);
+    ramp->bindToTextureUnit(5);
+    hatch1->bindToTextureUnit(6);
+    hatch2->bindToTextureUnit(7);
+    hatch3->bindToTextureUnit(8);
+    hatch4->bindToTextureUnit(9);
+    hatch5->bindToTextureUnit(10);
+    hatch6->bindToTextureUnit(11);
+
+    std::shared_ptr<GLWrap::Program> prog = programToonMerge;
+    prog->use();
+    prog->uniform("viewportSize", glm::vec2(getViewportSize().x, getViewportSize().y));
+    prog->uniform("shadeOcean", config.oceanShadingMode == OceanShadingMode_Toon);
+    prog->uniform("diffuseReflectanceTex", 0);
+    prog->uniform("materialTex", 1);
+    prog->uniform("normalsTex", 2);
+    prog->uniform("depthTex", 3);
+    prog->uniform("toonTex", 4);
+    prog->uniform("ramp", 5);
+    prog->uniform("hatch1", 6);
+    prog->uniform("hatch2", 7);
+    prog->uniform("hatch3", 8);
+    prog->uniform("hatch4", 9);
+    prog->uniform("hatch5", 10);
+    prog->uniform("hatch6", 11);
+
     prog->uniform("ambient", ambient);
     prog->uniform("rampEnabled", config.rampEnabled);
     prog->uniform("strokeEnabled", config.strokeEnabled);
     prog->uniform("hatchThreshold", config.strokeThreshold);
+    prog->uniform("multipleLights", config.multipleLightsEnabled);
+    prog->uniform("lightNum", lightNum);
 
     prog->uniform("specularThreshold", config.specularThreshold);
     prog->uniform("specularIntensity", config.specularIntensity);
@@ -934,8 +975,8 @@ void PLApp::toon_outline_pass(
     prog->uniform("depthLineThreshold", config.depthLineThreshold);
     prog->uniform("normalLineWidth", config.normalLineWidth);
     prog->uniform("normalLineThreshold", config.normalLineThreshold);
-    prog->uniform("AAThreshold", 0.5f);
-    prog->uniform("AAIntensity", 2.0f);
+    prog->uniform("AAThreshold", config.AAThreshold);
+    prog->uniform("AAIntensity", config.AAIntensity);
 
     fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
     prog->unuse();
@@ -1174,20 +1215,29 @@ void PLApp::draw_contents_deferred() {
 
             accBuffer->bind();
             glEnable(GL_BLEND);
-            glBlendFunc(GL_ONE, GL_ONE);
+            glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
+            glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
             glViewport(0, 0, getViewportSize().x, getViewportSize().y);
-            if (int(scene->ambientLights.size()) > 0 && config.ambientLightsEnabled) {
-                toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light,
-                    scene->ambientLights[0]->radiance);
-            }
-            else {
-                toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light,
-                    glm::vec3(0));
-            }
+            toon_lighting_pass(geomBuffer, shadowMap->depthTexture(), light);
             glDisable(GL_BLEND);
             accBuffer->unbind();
-            break;
+
+            if (!config.multipleLightsEnabled) {
+                break;
+            }
         }
+
+        std::swap(accBuffer, toonBuffer);
+        accBuffer->bind();
+        if (int(scene->ambientLights.size()) > 0 && config.ambientLightsEnabled) {
+            toon_merge_pass(geomBuffer, toonBuffer->colorTexture(), 
+                scene->ambientLights[0]->radiance, (int)lights.size());
+        }
+        else {
+            toon_merge_pass(geomBuffer, toonBuffer->colorTexture(), 
+                glm::vec3(0), (int)lights.size());
+        }
+        accBuffer->unbind();
     } else {
         if (config.pointLightsEnabled) {
             for (const PointLight& light : lights) {
@@ -1247,9 +1297,9 @@ void PLApp::draw_contents_deferred() {
     }
 
     if (config.toonEnabled) {
-        std::swap(accBuffer, toonBuffer);
+        std::swap(accBuffer, outlineBuffer);
         accBuffer->bind();
-        toon_outline_pass(geomBuffer, toonBuffer->colorTexture());
+        toon_outline_pass(geomBuffer, outlineBuffer->colorTexture());
         accBuffer->unbind();
     }
 

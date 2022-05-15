@@ -195,32 +195,32 @@ void main() {
 			if (depthCountU < depthCountD) {
 				vec2 lerpUV = geom_texCoord + depthLineWidth * vec2(0, 1) / viewportSize;
 				if (DepthCalc(lerpUV) > depthLineThreshold) {
-					MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(0, -1) / viewportSize), pixelOffset);
+					MyColor = lerp(MyColor, AfterColor(geom_texCoord + depthLineWidth * vec2(0, -1) / viewportSize), pixelOffset);
 				}
-				MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(0, 1) / viewportSize), pixelOffset);
+				MyColor = lerp(MyColor, AfterColor(geom_texCoord + depthLineWidth * vec2(0, 1) / viewportSize), pixelOffset);
 			}
 			else {
 				vec2 lerpUV = geom_texCoord + depthLineWidth * vec2(0, -1) / viewportSize;
 				if (DepthCalc(lerpUV) > depthLineThreshold) {
-					MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(0, 1) / viewportSize), pixelOffset);
+					MyColor = lerp(MyColor, AfterColor(geom_texCoord + depthLineWidth * vec2(0, 1) / viewportSize), pixelOffset);
 				}
-				MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(0, -1) / viewportSize), pixelOffset);
+				MyColor = lerp(MyColor, AfterColor(geom_texCoord + depthLineWidth * vec2(0, -1) / viewportSize), pixelOffset);
 			}
 		}
 		else {
 			if (depthCountR < depthCountL) {
 				vec2 lerpUV = geom_texCoord + depthLineWidth * vec2(1, 0) / viewportSize;
 				if (DepthCalc(lerpUV) > depthLineThreshold) {
-					MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(-1, 0) / viewportSize), pixelOffset);
+					MyColor = lerp(MyColor, AfterColor(geom_texCoord + depthLineWidth * vec2(-1, 0) / viewportSize), pixelOffset);
 				}
-				MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(1, 0) / viewportSize), pixelOffset);
+				MyColor = lerp(MyColor, AfterColor(geom_texCoord + depthLineWidth * vec2(1, 0) / viewportSize), pixelOffset);
 			}
 			else {
 				vec2 lerpUV = geom_texCoord + depthLineWidth * vec2(-1, 0) / viewportSize;
 				if (DepthCalc(lerpUV) > depthLineThreshold) {
-					MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(1, 0) / viewportSize), pixelOffset);
+					MyColor = lerp(MyColor, AfterColor(geom_texCoord + depthLineWidth * vec2(1, 0) / viewportSize), pixelOffset);
 				}
-				MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(-1, 0) / viewportSize), pixelOffset);
+				MyColor = lerp(MyColor, AfterColor(geom_texCoord + depthLineWidth * vec2(-1, 0) / viewportSize), pixelOffset);
 			}
 		}
 
@@ -293,32 +293,32 @@ void main() {
 			if (normalCountU < normalCountD) {
 				vec2 lerpUV = geom_texCoord + normalLineWidth * vec2(0, 1) / viewportSize;
 				if (NormalCalc(lerpUV) > normalLineThreshold) {
-					MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(0, -1) / viewportSize), pixelOffset);
+					MyColor = lerp(MyColor, AfterColor(geom_texCoord + normalLineWidth * vec2(0, -1) / viewportSize), pixelOffset);
 				}
-				MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(0, 1) / viewportSize), pixelOffset);
+				MyColor = lerp(MyColor, AfterColor(geom_texCoord + normalLineWidth * vec2(0, 1) / viewportSize), pixelOffset);
 			}
 			else {
 				vec2 lerpUV = geom_texCoord + normalLineWidth * vec2(0, -1) / viewportSize;
 				if (NormalCalc(lerpUV) > normalLineThreshold) {
-					MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(0, 1) / viewportSize), pixelOffset);
+					MyColor = lerp(MyColor, AfterColor(geom_texCoord + normalLineWidth * vec2(0, 1) / viewportSize), pixelOffset);
 				}
-				MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(0, -1) / viewportSize), pixelOffset);
+				MyColor = lerp(MyColor, AfterColor(geom_texCoord + normalLineWidth * vec2(0, -1) / viewportSize), pixelOffset);
 			}
 		}
 		else {
 			if (normalCountR < normalCountL) {
 				vec2 lerpUV = geom_texCoord + normalLineWidth * vec2(1, 0) / viewportSize;
 				if (NormalCalc(lerpUV) > normalLineThreshold) {
-					MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(-1, 0) / viewportSize), pixelOffset);
+					MyColor = lerp(MyColor, AfterColor(geom_texCoord + normalLineWidth * vec2(-1, 0) / viewportSize), pixelOffset);
 				}
-				MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(1, 0) / viewportSize), pixelOffset);
+				MyColor = lerp(MyColor, AfterColor(geom_texCoord + normalLineWidth * vec2(1, 0) / viewportSize), pixelOffset);
 			}
 			else {
 				vec2 lerpUV = geom_texCoord + normalLineWidth * vec2(-1, 0) / viewportSize;
 				if (NormalCalc(lerpUV) > normalLineThreshold) {
-					MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(1, 0) / viewportSize), pixelOffset);
+					MyColor = lerp(MyColor, AfterColor(geom_texCoord + normalLineWidth * vec2(1, 0) / viewportSize), pixelOffset);
 				}
-				MyColor = lerp(MyColor, AfterColor(geom_texCoord + vec2(-1, 0) / viewportSize), pixelOffset);
+				MyColor = lerp(MyColor, AfterColor(geom_texCoord + normalLineWidth * vec2(-1, 0) / viewportSize), pixelOffset);
 			}
 		}
 
