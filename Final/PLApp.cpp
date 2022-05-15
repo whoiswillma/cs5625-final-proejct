@@ -376,8 +376,6 @@ void PLApp::setUpNanoguiControls() {
         edgeIntensity->set_min_max_values(0, 10);
 
         gui->add_group("Outline");
-        gui->add_variable("FXAA", config.fxaaEnabled);
-
         auto depthLineWidth = gui->add_variable("Depth Line Width", config.depthLineWidth);
         depthLineWidth->set_spinnable(true);
         depthLineWidth->set_min_max_values(0, 10);
@@ -391,6 +389,15 @@ void PLApp::setUpNanoguiControls() {
 
         auto normalLineThreshold = gui->add_variable("Normal Line Threshold", config.normalLineThreshold);
         normalLineThreshold->set_min_max_values(0, 10);
+
+        gui->add_variable("FXAA", config.fxaaEnabled);
+        auto AAThreshold = gui->add_variable("AA Threshold", config.AAThreshold);
+        AAThreshold->set_spinnable(true);
+        AAThreshold->set_min_max_values(0, 0.5);
+
+        auto AAIntensity = gui->add_variable("AA Intensity", config.AAIntensity);
+        AAIntensity->set_spinnable(true);
+        AAIntensity->set_min_max_values(0, 10);
     }
 
     perform_layout();
@@ -898,6 +905,11 @@ void PLApp::toon_merge_pass(
     const glm::vec3 ambient,
     const int lightNum    
 ) {
+    geomBuffer->colorTexture(0).bindToTextureUnit(0);
+    geomBuffer->colorTexture(1).bindToTextureUnit(1);
+    geomBuffer->colorTexture(2).bindToTextureUnit(2);
+    geomBuffer->depthTexture().bindToTextureUnit(3);
+    toonTexture.bindToTextureUnit(4);
     ramp->bindToTextureUnit(5);
     hatch1->bindToTextureUnit(6);
     hatch2->bindToTextureUnit(7);
@@ -905,11 +917,6 @@ void PLApp::toon_merge_pass(
     hatch4->bindToTextureUnit(9);
     hatch5->bindToTextureUnit(10);
     hatch6->bindToTextureUnit(11);
-    geomBuffer->colorTexture(0).bindToTextureUnit(0);
-    geomBuffer->colorTexture(1).bindToTextureUnit(1);
-    geomBuffer->colorTexture(2).bindToTextureUnit(2);
-    geomBuffer->depthTexture().bindToTextureUnit(3);
-    toonTexture.bindToTextureUnit(4);
 
     std::shared_ptr<GLWrap::Program> prog = programToonMerge;
     prog->use();
@@ -968,8 +975,8 @@ void PLApp::toon_outline_pass(
     prog->uniform("depthLineThreshold", config.depthLineThreshold);
     prog->uniform("normalLineWidth", config.normalLineWidth);
     prog->uniform("normalLineThreshold", config.normalLineThreshold);
-    prog->uniform("AAThreshold", 0.5f);
-    prog->uniform("AAIntensity", 2.0f);
+    prog->uniform("AAThreshold", config.AAThreshold);
+    prog->uniform("AAIntensity", config.AAIntensity);
 
     fsqMesh->drawArrays(GL_TRIANGLE_FAN, 0, 4);
     prog->unuse();

@@ -55,6 +55,8 @@ struct PLAppConfig {
     float edgeThreshold = 0.6f;
     float edgeIntensity = 3.0f;
     float strokeThreshold = 0.5f;
+    float AAThreshold = 0.5f;
+    float AAIntensity = 2.0f;
     bool fxaaEnabled = true;
     bool rampEnabled = false;
     bool strokeEnabled = true;
