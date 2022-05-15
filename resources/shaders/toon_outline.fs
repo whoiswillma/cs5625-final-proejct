@@ -77,11 +77,24 @@ vec3 lerp(vec3 oriColor, vec3 newColor, float alpha) {
 	return (1 - alpha) * oriColor + alpha * newColor;
 }
 
+bool isOceanPixel(vec2 texCoord) {
+    return texture(materialsTex, texCoord).z == 1;
+}
+
 void main() {
     fragColor = texture(imageTex, geom_texCoord);
 
-    bool isOceanPixel = texture(materialsTex, geom_texCoord).z == 1;
-    if (!shadeOcean && isOceanPixel) {
+    bool oceanPixel =
+        isOceanPixel(geom_texCoord)
+        || isOceanPixel(geom_texCoord + vec2(-normalLineWidth, 0))
+        || isOceanPixel(geom_texCoord + vec2(normalLineWidth, 0))
+        || isOceanPixel(geom_texCoord + vec2(0, normalLineWidth))
+        || isOceanPixel(geom_texCoord + vec2(0, -normalLineWidth))
+        || isOceanPixel(geom_texCoord + vec2(-depthLineWidth, 0))
+        || isOceanPixel(geom_texCoord + vec2(depthLineWidth, 0))
+        || isOceanPixel(geom_texCoord + vec2(0, depthLineWidth))
+        || isOceanPixel(geom_texCoord + vec2(0, -depthLineWidth));
+    if (!shadeOcean && oceanPixel) {
         return;
     }
 

@@ -904,7 +904,7 @@ void PLApp::toon_merge_pass(
     const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
     const GLWrap::Texture2D& toonTexture,
     const glm::vec3 ambient,
-    const int lightNum    
+    const int lightNum
 ) {
     geomBuffer->colorTexture(0).bindToTextureUnit(0);
     geomBuffer->colorTexture(1).bindToTextureUnit(1);
@@ -1231,11 +1231,11 @@ void PLApp::draw_contents_deferred() {
         std::swap(accBuffer, toonBuffer);
         accBuffer->bind();
         if (int(scene->ambientLights.size()) > 0 && config.ambientLightsEnabled) {
-            toon_merge_pass(geomBuffer, toonBuffer->colorTexture(), 
+            toon_merge_pass(geomBuffer, toonBuffer->colorTexture(),
                 scene->ambientLights[0]->radiance, (int)lights.size());
         }
         else {
-            toon_merge_pass(geomBuffer, toonBuffer->colorTexture(), 
+            toon_merge_pass(geomBuffer, toonBuffer->colorTexture(),
                 glm::vec3(0), (int)lights.size());
         }
         accBuffer->unbind();
