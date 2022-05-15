@@ -119,7 +119,7 @@ void BirdNodeAnimator::animate_birds(double time) {
 
         glm::vec3 scatterVector =  this->birds[currBoid].position - avgPosition;
         const auto scatterFactor = 1.f / glm::length(scatterVector);
-        return glm::normalize(scatterVector) * scatterFactor * 100.f;
+        return glm::normalize(scatterVector) * scatterFactor * 250.f;
     };
 
     glm::vec3 currWind = Bird::wind.get_wind_dir(time);
