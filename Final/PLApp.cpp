@@ -336,7 +336,6 @@ void PLApp::setUpNanoguiControls() {
         int x = nanoguiWindows.ocean->position().x() + nanoguiWindows.ocean->size().x() + 10;
 
         nanoguiWindows.toon = gui->add_window(nanogui::Vector2i(x, 10), "Toon");
-        gui->add_group("Basic");
         gui->add_variable("Enabled", config.toonEnabled);
 
         gui->add_group("Diffuse");
@@ -346,11 +345,6 @@ void PLApp::setUpNanoguiControls() {
         auto strokeThreshold = gui->add_variable("Stroke Threshold", config.strokeThreshold);
         strokeThreshold->set_spinnable(true);
         strokeThreshold->set_min_max_values(0, 1);
-
-        gui->add_variable("Customized Ambient", config.ambientCustomized);
-        auto ambientIntensity = gui->add_variable("Ambient Intensity", config.ambientIntensity);
-        ambientIntensity->set_spinnable(true);
-        ambientIntensity->set_min_max_values(0, 1);
 
         gui->add_group("Specular");
         auto specularThreshold = gui->add_variable("Specular Threshold", config.specularThreshold);
@@ -903,8 +897,6 @@ void PLApp::toon_lighting_pass(
     prog->uniform("wCamPos", cam->getEye());
 
     prog->uniform("ambient", ambient);
-    prog->uniform("ambientCustomized", config.ambientCustomized);
-    prog->uniform("ambientIntensity", config.ambientIntensity);
     prog->uniform("rampEnabled", config.rampEnabled);
     prog->uniform("strokeEnabled", config.strokeEnabled);
     prog->uniform("hatchThreshold", config.strokeThreshold);

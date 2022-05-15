@@ -13,8 +13,6 @@ uniform mat4 mV_light;
 uniform mat4 mP_light;
 uniform sampler2D shadowTex;
 uniform vec3 ambient;
-uniform bool ambientCustomized;
-uniform float ambientIntensity;
 
 // Specular Properties
 uniform float specularThreshold;
@@ -69,12 +67,7 @@ void main() {
         fragColor = vec4(0, 0, 0, 0);
     } else {
         vec4 fragNDC4 = vec4(inputs.fragPosNDC, 1);
-
-        if (ambientCustomized) {
-            fragColor = vec4(vec3(ambientIntensity), 1.0);
-        } else {
-            fragColor = vec4(ambient, 1.0);
-        }
+        fragColor = vec4(ambient, 1.0);
 
         // Position of the fragment in eye space
         vec4 vPosition4 = inverse(mP) * fragNDC4;
