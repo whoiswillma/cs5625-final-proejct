@@ -5,7 +5,7 @@
 #include "Bird.hpp"
 #include <glm/gtx/io.hpp>
 
-const double bound = 7.5;
+const double bound = 15.0;
 const float randomVelocity = 30.0;
 const float height = 15.0;
 Wind Bird::wind;
@@ -52,11 +52,12 @@ void Bird::update_self(glm::vec3 deltaV) {
                 }),
             glm::vec3{ 0, 1, 0 }
         );
+    float rollTheta = glm::pow(glm::dot(glm::vec3(0, 1, 0), glm::cross(deltaV, this->velocity)) / 200.0f, 3.0f) / 100.0f;
     this->nodePtr->transform =
             glm::translate(glm::mat4(1), this->position) *
-            glm::mat4_cast(lookAtQuat) *
             glm::rotate(glm::mat4(1),
-                        glm::clamp((deltaV.x + deltaV.z) * 100.f, -0.2f, 0.2f),
+                        glm::clamp(rollTheta, -1.0f, 1.0f),
                         glm::normalize(this->velocity)) *
+            glm::mat4_cast(lookAtQuat) *
             this->rotScale;
 }
