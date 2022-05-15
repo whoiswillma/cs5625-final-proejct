@@ -4,13 +4,6 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include "Tessendorf.h"
-#define PERIOD_T 10.0f
-#define PATCH_SIZE glm::vec2(64, 64)
-#define GRAVITY 9.81f
-#define WIND_SPEED 12.0f
-#define MAX_WAVE_HEIGHT (WIND_SPEED * WIND_SPEED / GRAVITY)
-#define WIND_DIR glm::normalize(glm::vec2(0.2, 1))
-#define MIN_WAVE_HEIGHT (1e-4f * MAX_WAVE_HEIGHT)
 #define M_IMAG complex<float>(0.0f, 1.0f)
 
 namespace tessendorf {

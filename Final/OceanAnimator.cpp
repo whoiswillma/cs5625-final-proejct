@@ -40,21 +40,6 @@ void OceanAnimator::updateOceanBuffers(double time) {
             false);
 }
 
-void ocean_texture_normalize_and_store(
-        const std::shared_ptr<GLWrap::Texture2D>& texture,
-        float &scale,
-        float &offset,
-        tessendorf::array2d<float> buffer
-) {
-    float min = buffer.min();
-    float max = buffer.max();
-    buffer.plus(-min);
-    buffer.times(1 / (max - min));
-
-    scale = max - min;
-    offset = min;
-}
-
 OceanTextureBuffer::OceanTextureBuffer(
         std::string name,
         size_t size_x,

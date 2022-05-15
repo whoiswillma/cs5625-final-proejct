@@ -18,7 +18,7 @@
 
 PLApp::PLApp(
         const std::shared_ptr<Scene> &scene,
-        const std::shared_ptr<OceanScene> &oceanScene,        
+        const std::shared_ptr<OceanScene> &oceanScene,
         int height,
         const std::string& rampFileName,
         const PLAppConfig &config
@@ -190,7 +190,7 @@ void PLApp::setUpPrograms() {
             {GL_VERTEX_SHADER,   resourcePath + "shaders/fsq.vs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_shader_inputs.fs"},
             {GL_FRAGMENT_SHADER, resourcePath + "shaders/sunsky.fs"},
-            {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_ocean_directional.fs"}
+            {GL_FRAGMENT_SHADER, resourcePath + "shaders/deferred_ocean.fs"}
     }));
 
     programSrgb = std::shared_ptr<GLWrap::Program>(new GLWrap::Program("srgb", {
@@ -1086,7 +1086,7 @@ void PLApp::deferred_ocean_directional_pass(const std::shared_ptr<GLWrap::Frameb
     RTUtil::Sky sky(config.thetaSun, config.turbidity);
     sky.setUniforms(*prog);
 
-    // Bind uniforms in deferred_ocean_directional.fs
+    // Bind uniforms in deferred_ocean.fs
     prog->uniform("mV", cam->getViewMatrix());
     prog->uniform("upwelling", oceanScene->upwelling);
     prog->uniform("renderDistance", config.renderDistance);
