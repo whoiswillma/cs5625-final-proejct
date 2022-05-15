@@ -26,6 +26,7 @@ std::shared_ptr<Scene> importFile(const std::string& filename) {
 }
 
 const std::regex SCENE_ARG_REGEX("^--scene=(.+)$");
+const std::regex RAMP_ARG_REGEX("^--ramp=(.+)$");
 
 int main(int argc, char **argv) {
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
@@ -44,6 +45,8 @@ int main(int argc, char **argv) {
             glm::vec2(32, 32),
             glm::vec2(256, 256)
     );
+
+    std::string rampFileName = "../resources/ramps/ramp2.png";
 
     PLAppConfig config;
     for (int i = 1; i < argc; i++) {
@@ -126,12 +129,17 @@ int main(int argc, char **argv) {
             continue;
         }
 
+        if (std::regex_match(arg, match, RAMP_ARG_REGEX)) {
+            rampFileName = match[1];
+            continue;
+        }
+
         std::cerr << "Unable to parse argument: \"" << argv[i] << "\"" << std::endl;
         exit(1);
     }
 
     nanogui::init();
 
-    nanogui::ref<PLApp> app = new PLApp(scene, ocean, 700, config);
+    nanogui::ref<PLApp> app = new PLApp(scene, ocean, 700, rampFileName, config);
     nanogui::mainloop(16);
 }

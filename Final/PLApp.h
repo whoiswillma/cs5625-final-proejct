@@ -83,6 +83,7 @@ public:
             const std::shared_ptr<Scene>& scene,
             const std::shared_ptr<OceanScene>& oceanScene,
             int height,
+            const std::string& rampFileName,
             const PLAppConfig& config = PLAppConfig()
     );
 
@@ -112,6 +113,7 @@ private:
     std::shared_ptr<Scene> scene;
     std::shared_ptr<OceanScene> oceanScene;
     Animators animators;
+    std::string rampFileName;
 
     std::shared_ptr<GLWrap::Program> programFlat;
     std::shared_ptr<GLWrap::Program> programForward;

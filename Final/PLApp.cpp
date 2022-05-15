@@ -18,8 +18,9 @@
 
 PLApp::PLApp(
         const std::shared_ptr<Scene> &scene,
-        const std::shared_ptr<OceanScene> &oceanScene,
+        const std::shared_ptr<OceanScene> &oceanScene,        
         int height,
+        const std::string& rampFileName,
         const PLAppConfig &config
 ) : nanogui::Screen(
         nanogui::Vector2i((int) round(scene->camera->getAspectRatio() * (float) height), height),
@@ -28,6 +29,7 @@ PLApp::PLApp(
     backgroundColor(0.4f, 0.4f, 0.7f, 1.0f),
     scene(scene),
     oceanScene(oceanScene),
+    rampFileName(rampFileName),
     shadingMode(ShadingMode_Deferred),
     config(config),
     animators(scene, oceanScene) {
@@ -76,8 +78,7 @@ void PLApp::resetFramebuffers() {
 }
 
 void PLApp::loadTextures() {
-    ramp.reset(new GLWrap::Texture2D(
-        "../resources/ramps/ramp2.png", false, true));
+    ramp.reset(new GLWrap::Texture2D(rampFileName, false, true));
     hatch1.reset(new GLWrap::Texture2D(
         "../resources/strokes/hatch1.png", false, true));
     hatch2.reset(new GLWrap::Texture2D(
