@@ -84,16 +84,7 @@ bool isOceanPixel(vec2 texCoord) {
 void main() {
     fragColor = texture(imageTex, geom_texCoord);
 
-    bool oceanPixel =
-        isOceanPixel(geom_texCoord)
-        || isOceanPixel(geom_texCoord + vec2(-normalLineWidth, 0))
-        || isOceanPixel(geom_texCoord + vec2(normalLineWidth, 0))
-        || isOceanPixel(geom_texCoord + vec2(0, normalLineWidth))
-        || isOceanPixel(geom_texCoord + vec2(0, -normalLineWidth))
-        || isOceanPixel(geom_texCoord + vec2(-depthLineWidth, 0))
-        || isOceanPixel(geom_texCoord + vec2(depthLineWidth, 0))
-        || isOceanPixel(geom_texCoord + vec2(0, depthLineWidth))
-        || isOceanPixel(geom_texCoord + vec2(0, -depthLineWidth));
+    bool oceanPixel = isOceanPixel(geom_texCoord);
     if (!shadeOcean && oceanPixel) {
         return;
     }

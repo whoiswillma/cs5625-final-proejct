@@ -42,7 +42,7 @@ struct PLAppConfig {
     float shadowFar = 100;
     float shadowFov = 1;
     float exposure = 1;
-    float thetaSun = glm::pi<float>() / 3;
+    float thetaSun = glm::pi<float>() / 6;
     float turbidity = 4;
     int ssaoNumSamples = 15;
     int depthLineWidth = 2;
@@ -55,7 +55,7 @@ struct PLAppConfig {
     float edgeThreshold = 0.6f;
     float edgeIntensity = 3.0f;
     float strokeThreshold = 0.5f;
-    float AAThreshold = 0.5f;
+    float AAThreshold = 0.25f;
     float AAIntensity = 2.0f;
     bool fxaaEnabled = true;
     bool rampEnabled = false;
