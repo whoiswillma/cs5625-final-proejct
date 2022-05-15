@@ -66,7 +66,7 @@ struct PLAppConfig {
     bool convertAreaToPoint = true;
     bool ambientLightsEnabled = true;
     bool sunskyEnabled = true;
-    bool bloomFilterEnabled = true;
+    bool bloomFilterEnabled = false;
     bool toonEnabled = false;
     TextureFilteringMode textureFilteringMode = TextureFilteringMode_Linear;
 
@@ -193,7 +193,7 @@ private:
         const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,
         const GLWrap::Texture2D& toonTexture,
         const glm::vec3 ambient,
-        const int lightNum    
+        const int lightNum
     );
     void toon_outline_pass(
             const std::shared_ptr<GLWrap::Framebuffer>& geomBuffer,

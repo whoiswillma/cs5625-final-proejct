@@ -3,6 +3,7 @@
 //
 
 #include "BirdNodeAnimator.h"
+#include <glm/gtx/transform.hpp>
 
 bool BirdNodeAnimator::scatter = false;
 double BirdNodeAnimator::prevT = 0.0;
@@ -44,7 +45,7 @@ void BirdNodeAnimator::animate_birds(double time) {
             if (currBoid != currNeighbor) avgPosition += this->birds[currNeighbor].position;
         }
         avgPosition /= glm::max((unsigned long)(this->birds.size() - 1), (unsigned long)1);
-        return (avgPosition - this->birds[currBoid].position) / 100.f;
+        return (avgPosition - this->birds[currBoid].position) / 150.f;
     };
 
     /* returns the vector we need to add to the position of the current boid to prevent collision with
@@ -55,25 +56,47 @@ void BirdNodeAnimator::animate_birds(double time) {
         for (size_t currNeighbor = 0; currNeighbor < this->birds.size(); currNeighbor++) {
             if (currBoid != currNeighbor) {
                 float distance = glm::distance(this->birds[currBoid].position, this->birds[currNeighbor].position);
-                const float dist = 3.5f;
+                const float dist = 5.0f;
                 if (distance <= dist) {
                     correctionAmt -=
                             (this->birds[currNeighbor].position - this->birds[currBoid].position) *
-                            ((dist - distance) / dist);
+                            ((dist - distance) / dist) / 1.5f;
                 }
             }
         }
 
         // if a bird is going to go out of bounds, make it turn hard
-        if (glm::dot(Bird::walls[0].normal, this->birds[currBoid].position - Bird::walls[0].point) <= 1.0)
-            correctionAmt.x -= 0.1;
-        if (glm::dot(Bird::walls[1].normal, this->birds[currBoid].position - Bird::walls[1].point) <= 1.0)
-            correctionAmt.x += 0.1;
-        if (glm::dot(Bird::walls[2].normal, this->birds[currBoid].position - Bird::walls[2].point) <= 1.0)
-            correctionAmt.z -= 0.1;
-        if (glm::dot(Bird::walls[3].normal, this->birds[currBoid].position - Bird::walls[3].point) <= 1.0)
-            correctionAmt.z += 0.1;
+        for (auto & wall : Bird::walls) {
+            float distance_to_wall = glm::dot(wall.normal, this->birds[currBoid].position - wall.point);
+            if (distance_to_wall <= 8.0) {
+                // Apply a force in the direction of the wall's normal.
+                float correction_magnitude = glm::clamp(exp(-distance_to_wall - 20.0f), 0.0f, 0.2f);
 
+                glm::vec4 dir4;
+                switch (currBoid % 3) {
+                    case 0:
+                        dir4 = glm::rotate(
+                            glm::pi<float>() / 4,
+                            glm::vec3(0, 1, 0)
+                        ) * glm::vec4(wall.normal, 0);
+                        break;
+                    case 1:
+                        dir4 = glm::rotate(
+                            0.0f,
+                            glm::vec3(0, 1, 0)
+                        ) * glm::vec4(wall.normal, 0);
+                        break;
+                    default:
+                        dir4 = glm::rotate(
+                            -glm::pi<float>() / 4,
+                            glm::vec3(0, 1, 0)
+                        ) * glm::vec4(wall.normal, 0);
+                        break;
+                }
+                glm::vec3 dir = glm::normalize(glm::vec3(dir4.x, dir4.y, dir4.z));
+                correctionAmt += correction_magnitude * dir;
+            }
+        }
         return correctionAmt;
     };
 

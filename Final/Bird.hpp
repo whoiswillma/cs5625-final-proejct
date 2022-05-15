@@ -14,11 +14,7 @@
 
 struct Wall
 {
-    Wall(glm::vec3 point, glm::vec3 normal)
-    {
-        this->point = point;
-        this->normal = normal;
-    }
+    Wall(glm::vec3 point, glm::vec3 normal) : point(point), normal(glm::normalize(normal)) {}
     glm::vec3 point;
     glm::vec3 normal;
 };
