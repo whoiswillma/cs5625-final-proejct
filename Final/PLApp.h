@@ -54,12 +54,10 @@ struct PLAppConfig {
     float specularSmoothness = 0.5f;
     float edgeThreshold = 0.6f;
     float edgeIntensity = 3.0f;
-    float ambientIntensity = 0.1f;
     float strokeThreshold = 0.5f;
     bool fxaaEnabled = true;
     bool rampEnabled = false;
     bool strokeEnabled = true;
-    bool ambientCustomized = true;
     bool pcfEnabled = true;
     bool pointLightsEnabled = true;
     bool convertAreaToPoint = true;
